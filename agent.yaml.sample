@@ -1,0 +1,22 @@
+hostname: 192.168.1.1
+pidfile: /mnt/sda1/tmp/agent.pid
+
+docker:
+  endpoint: tcp://192.168.59.103:2375
+  registry: docker-registry.intra.hunantv.com
+
+lenz:
+  forwards:
+    - udp://10.100.1.154:50433
+  stdout: False
+
+metrics:
+  reportinterval: 10
+  host: 10.1.201.42:8086
+  username: root
+  password: root
+  database: test
+
+cleaner:
+  interval: 10
+  dir: /var/lib/docker/containers
