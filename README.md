@@ -1,4 +1,5 @@
-# Eru-Agent
+Eru Agent
+=========
 
 ## Features
 
