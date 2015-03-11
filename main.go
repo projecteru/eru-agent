@@ -46,6 +46,7 @@ func main() {
 
 	Status = NewStatus()
 	Status.Load()
+	go Status.Watcher()
 	go Status.Listen()
 	go Metrics.Report()
 	go cleaner.Clean()
