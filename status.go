@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"strings"
 
 	"./common"
@@ -8,6 +9,7 @@ import (
 	"./logs"
 	"./utils"
 	"github.com/fsouza/go-dockerclient"
+	"github.com/keimoon/gore"
 )
 
 type StatusMoniter struct {
@@ -32,14 +34,6 @@ func (self *StatusMoniter) Listen() {
 			Metrics.Remove(event.ID)
 			delete(self.Apps, event.ID)
 		}
-		if event.Status == common.STATUS_START {
-			container, err := common.Docker.InspectContainer(event.ID)
-			if err != nil {
-				logs.Info("Status inspect docker failed", err)
-				continue
-			}
-			self.Add(event.ID, container.Name)
-		}
 	}
 }
 
@@ -52,15 +46,77 @@ func (self *StatusMoniter) getStatus(s string) string {
 	}
 }
 
+func (self *StatusMoniter) Watcher() {
+	conn, err := common.Rds.Acquire()
+	if err != nil || conn == nil {
+		logs.Assert(err, "Get redis conn")
+	}
+	defer common.Rds.Release(conn)
+
+	subs := gore.NewSubscriptions(conn)
+	defer subs.Close()
+	subKey := fmt.Sprintf("eru:agent:%s:watcher", config.HostName)
+	logs.Debug("Monitor taget", subKey)
+	subs.Subscribe(subKey)
+
+	for message := range subs.Message() {
+		if message == nil {
+			break
+		}
+		command := string(message.Message)
+		logs.Debug("Get command", command)
+		parser := strings.Split(command, "|")
+		control, containerID := parser[0], parser[1]
+		switch control {
+		case "+":
+			logs.Info("Watch", containerID)
+			container, err := common.Docker.InspectContainer(containerID)
+			if err != nil {
+				logs.Info("Status inspect docker failed", err)
+			} else {
+				self.Add(containerID, container.Name)
+			}
+		case "-":
+			logs.Info("Remove", containerID)
+			Metrics.Remove(containerID)
+			if _, ok := self.Apps[containerID]; ok {
+				delete(self.Apps, containerID)
+			}
+		}
+	}
+}
+
 func (self *StatusMoniter) Load() {
 	containers, err := common.Docker.ListContainers(docker.ListContainersOptions{All: true})
 	if err != nil {
-		logs.Info(err, "Load container")
+		logs.Assert(err, "List containers")
+	}
+
+	conn, err := common.Rds.Acquire()
+	if err != nil || conn == nil {
+		logs.Assert(err, "Get redis conn")
+	}
+	defer common.Rds.Release(conn)
+
+	containersKey := fmt.Sprintf("eru:agent:%s:containers", config.HostName)
+	logs.Debug("Get tagets from", containersKey)
+	rep, err := gore.NewCommand("LRANGE", containersKey, 0, -1).Run(conn)
+	if err != nil {
+		logs.Assert(err, "Get targets")
+	}
+	targetContainersList := []string{}
+	rep.Slice(&targetContainersList)
+	logs.Debug("Targets:", targetContainersList)
+
+	targets := map[string]struct{}{}
+	for _, target := range targetContainersList {
+		targets[target] = struct{}{}
 	}
 
 	logs.Info("Load container")
+
 	for _, container := range containers {
-		if !strings.HasPrefix(container.Image, config.Docker.Registry) {
+		if _, ok := targets[container.ID]; !ok {
 			continue
 		}
 		status := self.getStatus(container.Status)
@@ -73,6 +129,10 @@ func (self *StatusMoniter) Load() {
 }
 
 func (self *StatusMoniter) Add(ID, containerName string) {
+	if _, ok := self.Apps[ID]; ok {
+		// safe add
+		return
+	}
 	name, entrypoint, ident := utils.GetAppInfo(containerName)
 	if name == "" {
 		// ignore

@@ -6,10 +6,10 @@ import (
 	"github.com/fsouza/go-dockerclient"
 )
 
-var config LeviConfig
+var config AgentConfig
 
 func init() {
-	config = LeviConfig{}
+	config = AgentConfig{}
 	config.Docker = DockerConfig{}
 	config.Docker.Endpoint = "tcp://192.168.59.103:2375"
 }

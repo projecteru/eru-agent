@@ -24,7 +24,14 @@ type CleanerConfig struct {
 	Dir      string
 }
 
-type LeviConfig struct {
+type RedisConfig struct {
+	Host string
+	Port int
+	Min  int
+	Max  int
+}
+
+type AgentConfig struct {
 	HostName string `yaml:"hostname"`
 	PidFile  string
 
@@ -32,4 +39,5 @@ type LeviConfig struct {
 	Lenz    LenzConfig
 	Metrics MetricsConfig
 	Cleaner CleanerConfig
+	Redis   RedisConfig
 }

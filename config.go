@@ -10,7 +10,7 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-var config = defines.LeviConfig{}
+var config = defines.AgentConfig{}
 
 func LoadConfig() {
 	var configPath string

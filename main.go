@@ -1,9 +1,12 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
+
+	"github.com/keimoon/gore"
 
 	"./common"
 	"./defines"
@@ -21,6 +24,17 @@ var Status *StatusMoniter
 func main() {
 	LoadConfig()
 
+	common.Rds = &gore.Pool{
+		InitialConn: config.Redis.Min,
+		MaximumConn: config.Redis.Max,
+	}
+
+	redisHost := fmt.Sprintf("%s:%d", config.Redis.Host, config.Redis.Port)
+	if err := common.Rds.Dial(redisHost); err != nil {
+		logs.Assert(err, "Redis init failed")
+	}
+	defer common.Rds.Close()
+
 	common.Docker = defines.NewDocker(config.Docker.Endpoint)
 
 	Lenz = lenz.NewLenz(config.Lenz)
@@ -32,6 +46,7 @@ func main() {
 
 	Status = NewStatus()
 	Status.Load()
+	go Status.Watcher()
 	go Status.Listen()
 	go Metrics.Report()
 	go cleaner.Clean()

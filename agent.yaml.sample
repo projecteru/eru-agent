@@ -1,4 +1,4 @@
-hostname: 192.168.1.1
+hostname: 127.0.0.1
 pidfile: /mnt/sda1/tmp/agent.pid
 
 docker:
@@ -20,3 +20,10 @@ metrics:
 cleaner:
   interval: 10
   dir: /var/lib/docker/containers
+
+redis:
+  host: 127.0.0.1
+  port: 6379
+  min: 5
+  max: 100
+
