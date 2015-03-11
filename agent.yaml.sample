@@ -20,3 +20,8 @@ metrics:
 cleaner:
   interval: 10
   dir: /var/lib/docker/containers
+
+redis:
+  host: 127.0.0.1
+  port: 3306
+

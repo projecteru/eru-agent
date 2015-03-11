@@ -7,7 +7,7 @@ import (
 var Mode bool = false
 
 func init() {
-	log.SetPrefix("Levi ")
+	log.SetPrefix("Agent ")
 }
 
 func Info(v ...interface{}) {
