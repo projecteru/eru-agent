@@ -3,22 +3,20 @@ package utils
 import (
 	"os"
 	"testing"
-
-	"../common"
 )
 
 func Test_GetAppInfo(t *testing.T) {
 	var containerName string
-	containerName = "test_1234"
-	appname, appid, apptype := GetAppInfo(containerName)
+	containerName = "test_1234_abc"
+	appname, entrypoint, ident := GetAppInfo(containerName)
 	if appname != "test" {
 		t.Error("Get appname failed")
 	}
-	if appid != "1234" {
-		t.Error("Get appid failed")
+	if entrypoint != "1234" {
+		t.Error("Get entrypoint failed")
 	}
-	if apptype != common.DEFAULT_TYPE {
-		t.Error("Get apptype failed")
+	if ident != "abc" {
+		t.Error("Get ident failed")
 	}
 }
 
