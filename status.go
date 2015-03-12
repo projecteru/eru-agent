@@ -30,10 +30,12 @@ func (self *StatusMoniter) Listen() {
 	for event := range self.events {
 		logs.Debug("Status:", event.Status, event.ID, event.From)
 		if event.Status == common.STATUS_DIE {
-			// Check and report to core
-			Metrics.Remove(event.ID)
+			// Check if exists
 			if _, ok := self.Apps[event.ID]; ok {
+				// Means agent is watching this container
+				Metrics.Remove(event.ID)
 				delete(self.Apps, event.ID)
+				//TODO report to core
 			}
 		}
 	}
