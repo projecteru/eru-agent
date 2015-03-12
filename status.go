@@ -30,9 +30,11 @@ func (self *StatusMoniter) Listen() {
 	for event := range self.events {
 		logs.Debug("Status:", event.Status, event.ID, event.From)
 		if event.Status == common.STATUS_DIE {
-			// Always in apps
+			// Check and report to core
 			Metrics.Remove(event.ID)
-			delete(self.Apps, event.ID)
+			if _, ok := self.Apps[event.ID]; ok {
+				delete(self.Apps, event.ID)
+			}
 		}
 	}
 }
@@ -75,12 +77,6 @@ func (self *StatusMoniter) Watcher() {
 				logs.Info("Status inspect docker failed", err)
 			} else {
 				self.Add(containerID, container.Name)
-			}
-		case "-":
-			logs.Info("Remove", containerID)
-			Metrics.Remove(containerID)
-			if _, ok := self.Apps[containerID]; ok {
-				delete(self.Apps, containerID)
 			}
 		}
 	}
