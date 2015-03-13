@@ -121,6 +121,7 @@ func Unmarshal(input io.ReadCloser, obj interface{}) error {
 }
 
 func GetAppInfo(containerName string) (name string, entrypoint string, ident string) {
+	containerName = strings.TrimLeft(containerName, "/")
 	appinfo := strings.Split(containerName, "_")
 	if len(appinfo) != common.CNAME_NUM {
 		return "", "", ""
