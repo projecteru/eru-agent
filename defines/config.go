@@ -2,7 +2,6 @@ package defines
 
 type DockerConfig struct {
 	Endpoint string
-	Registry string
 }
 
 type LenzConfig struct {
