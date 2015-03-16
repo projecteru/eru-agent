@@ -4,6 +4,10 @@ type DockerConfig struct {
 	Endpoint string
 }
 
+type EruConfig struct {
+	Endpoint string
+}
+
 type LenzConfig struct {
 	Routes   string
 	Forwards []string
@@ -35,6 +39,7 @@ type AgentConfig struct {
 	PidFile  string
 
 	Docker  DockerConfig
+	Eru     EruConfig
 	Lenz    LenzConfig
 	Metrics MetricsConfig
 	Cleaner CleanerConfig

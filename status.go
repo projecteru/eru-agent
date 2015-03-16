@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"net/http"
 	"strings"
 
 	"./common"
@@ -35,7 +36,7 @@ func (self *StatusMoniter) Listen() {
 				// Means agent is watching this container
 				Metrics.Remove(event.ID)
 				delete(self.Apps, event.ID)
-				//TODO report to core
+				reportContainerDeath(event.ID)
 			}
 		}
 	}
@@ -119,7 +120,7 @@ func (self *StatusMoniter) Load() {
 		}
 		status := self.getStatus(container.Status)
 		if status != common.STATUS_START {
-			//TODO report to eru
+			reportContainerDeath(container.ID)
 			continue
 		}
 		self.Add(container.ID, container.Names[0])
@@ -141,4 +142,26 @@ func (self *StatusMoniter) Add(ID, containerName string) {
 	self.Apps[ID] = app
 	Metrics.Add(ID, app)
 	Lenz.Attacher.Attach(ID, app)
+}
+
+func reportContainerDeath(cid string) {
+	conn, err := common.Rds.Acquire()
+	if err != nil || conn == nil {
+		logs.Assert(err, "Get redis conn")
+	}
+	defer common.Rds.Release(conn)
+
+	rep, err := gore.NewCommand("GET", fmt.Sprintf("eru:agent:%s:container:flag", cid)).Run(conn)
+	if err != nil {
+		logs.Assert(err, "failed in GET")
+	}
+	if !rep.IsNil() {
+		logs.Info(cid, "flag set, ignore")
+		return
+	}
+
+	url := fmt.Sprintf("%s/api/container/%s/kill", config.Eru.Endpoint, cid)
+	client := &http.Client{}
+	req, _ := http.NewRequest("PUT", url, nil)
+	client.Do(req)
 }
