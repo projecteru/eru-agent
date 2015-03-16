@@ -1,6 +1,9 @@
 hostname: 127.0.0.1
 pidfile: /mnt/sda1/tmp/agent.pid
 
+eru:
+  endpoint: http://localhost:5000
+
 docker:
   endpoint: tcp://192.168.59.103:2375
 
