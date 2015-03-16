@@ -99,7 +99,7 @@ func (self *StatusMoniter) Load() {
 
 	containersKey := fmt.Sprintf("eru:agent:%s:containers", config.HostName)
 	logs.Debug("Get tagets from", containersKey)
-	rep, err := gore.NewCommand("SMEMBER", containersKey).Run(conn)
+	rep, err := gore.NewCommand("SMEMBERS", containersKey).Run(conn)
 	if err != nil {
 		logs.Assert(err, "Get targets")
 	}
