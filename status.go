@@ -30,13 +30,21 @@ func (self *StatusMoniter) Listen() {
 	logs.Info("Status Monitor Start")
 	for event := range self.events {
 		logs.Debug("Status:", event.Status, event.ID, event.From)
-		if event.Status == common.STATUS_DIE {
+		switch event.Status {
+		case common.STATUS_DIE:
 			// Check if exists
 			if _, ok := self.Apps[event.ID]; ok {
-				// Means agent is watching this container
 				Metrics.Remove(event.ID)
 				delete(self.Apps, event.ID)
 				reportContainerDeath(event.ID)
+			}
+		case common.STATUS_START:
+			container, err := common.Docker.InspectContainer(event.ID)
+			if err != nil {
+				logs.Info("Status inspect docker failed", err)
+			} else {
+				self.Add(event.ID, container.Name)
+				logs.Debug(event.ID, "cured, added in watching list")
 			}
 		}
 	}
@@ -142,6 +150,7 @@ func (self *StatusMoniter) Add(ID, containerName string) {
 	self.Apps[ID] = app
 	Metrics.Add(ID, app)
 	Lenz.Attacher.Attach(ID, app)
+	reportContainerCure(ID)
 }
 
 func reportContainerDeath(cid string) {
@@ -156,11 +165,18 @@ func reportContainerDeath(cid string) {
 		logs.Assert(err, "failed in GET")
 	}
 	if !rep.IsNil() {
-		logs.Info(cid, "flag set, ignore")
+		logs.Debug(cid, "flag set, ignore")
 		return
 	}
 
 	url := fmt.Sprintf("%s/api/container/%s/kill", config.Eru.Endpoint, cid)
+	client := &http.Client{}
+	req, _ := http.NewRequest("PUT", url, nil)
+	client.Do(req)
+}
+
+func reportContainerCure(cid string) {
+	url := fmt.Sprintf("%s/api/container/%s/cure", config.Eru.Endpoint, cid)
 	client := &http.Client{}
 	req, _ := http.NewRequest("PUT", url, nil)
 	client.Do(req)
