@@ -24,8 +24,8 @@ type DockerWrapper struct {
 	StartExec        func(string, docker.StartExecOptions) error
 }
 
-func NewDocker(endpoint string) *DockerWrapper {
-	client, err := docker.NewClient(endpoint)
+func NewDocker(endpoint, cert, key, ca string) *DockerWrapper {
+	client, err := docker.NewTLSClient(endpoint, cert, key, ca)
 	if err != nil {
 		logs.Assert(err, "Docker")
 	}

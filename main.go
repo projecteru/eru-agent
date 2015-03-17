@@ -35,7 +35,12 @@ func main() {
 	}
 	defer common.Rds.Close()
 
-	common.Docker = defines.NewDocker(config.Docker.Endpoint)
+	common.Docker = defines.NewDocker(
+		config.Docker.Endpoint,
+		config.Docker.Cert,
+		config.Docker.Key,
+		config.Docker.Ca,
+	)
 
 	Lenz = lenz.NewLenz(config.Lenz)
 	cleaner := lenz.NewCleaner(config.Cleaner)

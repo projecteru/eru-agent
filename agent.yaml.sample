@@ -5,7 +5,10 @@ eru:
   endpoint: http://localhost:5000
 
 docker:
-  endpoint: tcp://192.168.59.103:2375
+  endpoint: tcp://192.168.59.103:2376
+  cert: cert.pem
+  key: key.pem
+  ca: ca.pem
 
 lenz:
   forwards:
