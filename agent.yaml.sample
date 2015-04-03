@@ -17,10 +17,12 @@ lenz:
 
 metrics:
   reportinterval: 10
-  host: 10.1.201.42:8086
+  host: http://10.1.201.43:8086
   username: root
   password: root
   database: test
+  retention: default
+  precision: s
 
 cleaner:
   interval: 10

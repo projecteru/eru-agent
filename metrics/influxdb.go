@@ -1,7 +1,8 @@
 package metrics
 
 import (
-	"net/http"
+	"net/url"
+	"time"
 
 	"../defines"
 	"../logs"
@@ -9,53 +10,67 @@ import (
 )
 
 type InfluxDBClient struct {
-	hostname string
-	client   *client.Client
-	series   []*client.Series
+	hostname  string
+	database  string
+	retention string
+	precision string
+	client    *client.Client
+	points    []client.Point
 }
 
-var influxdb_columns []string = []string{"host", "ID", "entrypoint", "ident", "metric", "value"}
-
 func NewInfluxDBClient(hostname string, config defines.MetricsConfig) *InfluxDBClient {
-	c := &client.ClientConfig{
-		Host:       config.Host,
-		Username:   config.Username,
-		Password:   config.Password,
-		Database:   config.Database,
-		HttpClient: http.DefaultClient,
-		IsSecure:   false,
-		IsUDP:      false,
+	host, _ := url.Parse(config.Host)
+	c := client.Config{
+		URL:      *host,
+		Username: config.Username,
+		Password: config.Password,
 	}
-	i, err := client.New(c)
+
+	i, err := client.NewClient(c)
 	if err != nil {
 		logs.Assert(err, "InfluxDB")
 	}
-	return &InfluxDBClient{hostname, i, []*client.Series{}}
+	return &InfluxDBClient{
+		hostname, config.Database,
+		config.Retention, config.Precision,
+		i, []client.Point{},
+	}
 }
 
 func (self *InfluxDBClient) GenSeries(ID string, metric *MetricData) {
-	points := [][]interface{}{
-		{self.hostname, ID, metric.app.EntryPoint, metric.app.Ident, "cpu_usage", metric.cpu_usage},
-		{self.hostname, ID, metric.app.EntryPoint, metric.app.Ident, "cpu_system", metric.cpu_system},
-		{self.hostname, ID, metric.app.EntryPoint, metric.app.Ident, "cpu_user", metric.cpu_user},
-		{self.hostname, ID, metric.app.EntryPoint, metric.app.Ident, "mem_usage", metric.mem_usage},
-		{self.hostname, ID, metric.app.EntryPoint, metric.app.Ident, "mem_rss", metric.mem_rss},
-		{self.hostname, ID, metric.app.EntryPoint, metric.app.Ident, "net_recv", metric.net_inbytes},
-		{self.hostname, ID, metric.app.EntryPoint, metric.app.Ident, "net_send", metric.net_outbytes},
-		{self.hostname, ID, metric.app.EntryPoint, metric.app.Ident, "net_recv_err", metric.net_inerrs},
-		{self.hostname, ID, metric.app.EntryPoint, metric.app.Ident, "net_send_err", metric.net_outerrs},
+	point := client.Point{
+		Name: metric.app.Name,
+		Tags: map[string]string{
+			"hostname":   self.hostname,
+			"ID":         ID,
+			"entrypoint": metric.app.EntryPoint,
+			"ident":      metric.app.Ident,
+		},
+		Fields: map[string]interface{}{
+			"cpu_usage":    metric.cpu_usage,
+			"cpu_system":   metric.cpu_system,
+			"cpu_user":     metric.cpu_user,
+			"mem_usage":    metric.mem_usage,
+			"mem_rss":      metric.mem_rss,
+			"net_recv":     metric.net_inbytes,
+			"net_send":     metric.net_outbytes,
+			"net_recv_err": metric.net_inerrs,
+			"net_send_err": metric.net_outerrs,
+		},
+		Timestamp: time.Now(),
+		Precision: self.precision,
 	}
-	series := &client.Series{
-		Name:    metric.app.Name,
-		Columns: influxdb_columns,
-		Points:  points,
-	}
-	self.series = append(self.series, series)
+	self.points = append(self.points, point)
 }
 
 func (self *InfluxDBClient) Send() {
-	if err := self.client.WriteSeries(self.series); err != nil {
+	bps := client.BatchPoints{
+		Points:          self.points,
+		Database:        self.database,
+		RetentionPolicy: self.retention,
+	}
+	if _, err := self.client.Write(bps); err != nil {
 		logs.Info("Write to InfluxDB Failed", err)
 	}
-	self.series = []*client.Series{}
+	self.points = []client.Point{}
 }

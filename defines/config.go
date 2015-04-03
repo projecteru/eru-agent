@@ -23,6 +23,8 @@ type MetricsConfig struct {
 	Username       string
 	Password       string
 	Database       string
+	Retention      string
+	Precision      string
 }
 
 type CleanerConfig struct {
