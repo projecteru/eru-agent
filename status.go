@@ -109,7 +109,7 @@ func (self *StatusMoniter) Load() {
 	defer common.Rds.Release(conn)
 
 	containersKey := fmt.Sprintf("eru:agent:%s:containers", config.HostName)
-	logs.Debug("Get tagets from", containersKey)
+	logs.Debug("Get targets from", containersKey)
 	rep, err := gore.NewCommand("SMEMBERS", containersKey).Run(conn)
 	if err != nil {
 		logs.Assert(err, "Get targets")
@@ -146,6 +146,7 @@ func (self *StatusMoniter) Add(ID, containerName string) {
 	name, entrypoint, ident := utils.GetAppInfo(containerName)
 	if name == "" {
 		// ignore
+		logs.Info("Container name invald", containerName)
 		return
 	}
 	logs.Debug("Container", name, entrypoint, ident)
