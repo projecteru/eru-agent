@@ -32,7 +32,7 @@ func getLongID(shortID string) (parentName string, longID string, pid string, er
 	dir := filepath.Dir(a[0])
 	longID = filepath.Base(dir)
 	parentName = filepath.Base(filepath.Dir(dir))
-	pid = strings.Split(string(contents), "\n")[0]
+	pid = strconv.Atoi(strings.Split(string(contents), "\n")[0])
 	return
 }
 

@@ -3,8 +3,8 @@ package metrics
 import (
 	"../logs"
 
-	"github.com/docker/libcontainer/cgroups"
 	"github.com/docker/libcontainer/cgroups/fs"
+	"github.com/docker/libcontainer/configs"
 )
 
 func InitDevDir() {
@@ -18,12 +18,14 @@ func InitDevDir() {
 
 func GetCgroupStats(id string) (m *cgroups.Stats, err error) {
 	var parentName string
-	if parentName, id, _, err = getLongID(id); err != nil {
+	if parentName, id, pid, err = getLongID(id); err != nil {
 		return
 	}
-	c := cgroups.Cgroup{
+	c := configs.Cgroup{
 		Parent: parentName,
 		Name:   id,
 	}
-	return fs.GetStats(&c)
+	m := fs.Manager{&c, map[string]string{}}
+	m.Apply(pid)
+	return m.GetStats()
 }
