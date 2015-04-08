@@ -16,14 +16,14 @@ import (
 
 var devDir string = ""
 
-func getLongID(shortID string) (parentName string, longID string, pid string, err error) {
+func getLongID(shortID string) (parentName string, longID string, pid int, err error) {
 	pat := filepath.Join(devDir, "*", fmt.Sprintf("*%s*", shortID), "tasks")
 	a, err := filepath.Glob(pat)
 	if err != nil {
 		return
 	}
 	if len(a) != 1 {
-		return "", "", "", fmt.Errorf("Get Long ID Failed %s", shortID)
+		return "", "", 0, fmt.Errorf("Get Long ID Failed %s", shortID)
 	}
 	contents, err := ioutil.ReadFile(a[0])
 	if err != nil {
@@ -32,7 +32,7 @@ func getLongID(shortID string) (parentName string, longID string, pid string, er
 	dir := filepath.Dir(a[0])
 	longID = filepath.Base(dir)
 	parentName = filepath.Base(filepath.Dir(dir))
-	pid = strconv.Atoi(strings.Split(string(contents), "\n")[0])
+	pid, _ = strconv.Atoi(strings.Split(string(contents), "\n")[0])
 	return
 }
 
