@@ -11,8 +11,9 @@ import (
 type MetricData struct {
 	app *defines.App
 
-	mem_usage uint64
-	mem_rss   uint64
+	mem_usage     uint64
+	mem_max_usage uint64
+	mem_rss       uint64
 
 	net_inbytes  uint64
 	net_outbytes uint64
@@ -39,6 +40,10 @@ func (self *MetricData) UpdateStats(ID string) bool {
 	self.cpu_user = stats.CpuStats.CpuUsage.UsageInUsermode
 	self.cpu_system = stats.CpuStats.CpuUsage.UsageInKernelmode
 	self.cpu_usage = stats.CpuStats.CpuUsage.TotalUsage
+
+	self.mem_usage = stats.MemoryStats.Usage
+	self.mem_max_usage = stats.MemoryStats.MaxUsage
+	self.mem_rss = stats.MemoryStats.Stats["rss"]
 
 	iStats, err := GetNetStats(ID)
 	if err != nil {
