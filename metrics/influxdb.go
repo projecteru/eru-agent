@@ -53,13 +53,12 @@ func (self *InfluxDBClient) GenSeries(ID string, metric *MetricData) {
 			"mem_usage":     metric.mem_usage,
 			"mem_max_usage": metric.mem_max_usage,
 			"mem_rss":       metric.mem_rss,
-			"net_recv":      metric.net_inbytes,
-			"net_send":      metric.net_outbytes,
-			"net_recv_err":  metric.net_inerrs,
-			"net_send_err":  metric.net_outerrs,
 		},
 		Timestamp: time.Now(),
 		Precision: self.precision,
+	}
+	for key, data := range metric.network {
+		point.Fields[key] = data
 	}
 	self.points = append(self.points, point)
 }

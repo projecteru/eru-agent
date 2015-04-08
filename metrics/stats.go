@@ -79,7 +79,7 @@ func GetNetStats(cid string) (result map[string]uint64, err error) {
 		result = map[string]uint64{}
 		s := bufio.NewScanner(outr)
 		var d uint64
-		for i := 0; s.Scan(); {
+		for s.Scan() {
 			var name string
 			var n [8]uint64
 			text := s.Text()
@@ -96,16 +96,14 @@ func GetNetStats(cid string) (result map[string]uint64, err error) {
 				&n[0], &n[1], &n[2], &n[3], &d, &d, &d, &d,
 				&n[4], &n[5], &n[6], &n[7], &d, &d, &d, &d,
 			)
-			j := "." + strconv.Itoa(i)
-			result["inbytes"+j] = n[0]
-			result["inpackets"+j] = n[1]
-			result["inerrs"+j] = n[2]
-			result["indrop"+j] = n[3]
-			result["outbytes"+j] = n[4]
-			result["outpackets"+j] = n[5]
-			result["outerrs"+j] = n[6]
-			result["outdrop"+j] = n[7]
-			i++
+			result[name+".inbytes"] = n[0]
+			result[name+".inpackets"] = n[1]
+			result[name+".inerrs"] = n[2]
+			result[name+".indrop"] = n[3]
+			result[name+".outbytes"] = n[4]
+			result[name+".outpackets"] = n[5]
+			result[name+".outerrs"] = n[6]
+			result[name+".outdrop"] = n[7]
 		}
 		logs.Debug("Container net status", cid, result)
 		return

@@ -15,14 +15,11 @@ type MetricData struct {
 	mem_max_usage uint64
 	mem_rss       uint64
 
-	net_inbytes  uint64
-	net_outbytes uint64
-	net_inerrs   uint64
-	net_outerrs  uint64
-
 	cpu_user   uint64
 	cpu_system uint64
 	cpu_usage  uint64
+
+	network map[string]uint64
 }
 
 func NewMetricData(app *defines.App) *MetricData {
@@ -45,15 +42,10 @@ func (self *MetricData) UpdateStats(ID string) bool {
 	self.mem_max_usage = stats.MemoryStats.MaxUsage
 	self.mem_rss = stats.MemoryStats.Stats["rss"]
 
-	iStats, err := GetNetStats(ID)
-	if err != nil {
+	if self.network, err = GetNetStats(ID); err != nil {
 		logs.Info(err)
 		return false
 	}
-	self.net_inbytes = iStats["inbytes.0"]
-	self.net_outbytes = iStats["outbytes.0"]
-	self.net_inerrs = iStats["inerrs.0"]
-	self.net_outerrs = iStats["outerrs.0"]
 	return true
 }
 
