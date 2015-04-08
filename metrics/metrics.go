@@ -109,7 +109,11 @@ func (self *MetricsRecorder) Stop() {
 func (self *MetricsRecorder) Send() {
 	self.mu.Lock()
 	defer self.mu.Unlock()
-	self.wg.Add(len(self.apps))
+	apps := len(self.apps)
+	if apps <= 0 {
+		return
+	}
+	self.wg.Add(apps)
 	for ID, metric := range self.apps {
 		go func(ID string, metric *MetricData) {
 			defer self.wg.Done()
