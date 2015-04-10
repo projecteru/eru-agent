@@ -84,6 +84,7 @@ func (self *MetricData) CalcRate() {
 		self.cpu_usage_rate = float64(self.cpu_usage-self.last_cpu_usage) / nano_t
 	}
 	second_t := t.Seconds()
+	self.network_rate = map[string]float64{}
 	for key, data := range self.network {
 		if data > self.last_network[key] {
 			self.network_rate[key+".rate"] = float64(data-self.last_network[key]) / second_t
