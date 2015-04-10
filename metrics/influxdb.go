@@ -47,17 +47,23 @@ func (self *InfluxDBClient) GenSeries(ID string, metric *MetricData) {
 			"ident":      metric.app.Ident,
 		},
 		Fields: map[string]interface{}{
-			"cpu_usage":     metric.cpu_usage,
-			"cpu_system":    metric.cpu_system,
-			"cpu_user":      metric.cpu_user,
-			"mem_usage":     metric.mem_usage,
-			"mem_max_usage": metric.mem_max_usage,
-			"mem_rss":       metric.mem_rss,
+			"cpu_usage":       metric.cpu_usage,
+			"cpu_system":      metric.cpu_system,
+			"cpu_user":        metric.cpu_user,
+			"mem_usage":       metric.mem_usage,
+			"mem_max_usage":   metric.mem_max_usage,
+			"mem_rss":         metric.mem_rss,
+			"cpu_usage_rate":  metric.cpu_user_rate,
+			"cpu_system_rate": metric.cpu_system_rate,
+			"cpu_user_rate":   metric.cpu_user_rate,
 		},
 		Timestamp: time.Now(),
 		Precision: self.precision,
 	}
 	for key, data := range metric.network {
+		point.Fields[key] = data
+	}
+	for key, data := range metric.network_rate {
 		point.Fields[key] = data
 	}
 	self.points = append(self.points, point)
