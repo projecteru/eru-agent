@@ -53,7 +53,7 @@ func (self *InfluxDBClient) GenSeries(ID string, metric *MetricData) {
 			"mem_usage":       metric.mem_usage,
 			"mem_max_usage":   metric.mem_max_usage,
 			"mem_rss":         metric.mem_rss,
-			"cpu_usage_rate":  metric.cpu_user_rate,
+			"cpu_usage_rate":  metric.cpu_usage_rate,
 			"cpu_system_rate": metric.cpu_system_rate,
 			"cpu_user_rate":   metric.cpu_user_rate,
 		},
