@@ -90,6 +90,7 @@ func (self *MetricData) CalcRate() {
 			self.network_rate[key+".rate"] = float64(data-self.last_network[key]) / second_t
 		}
 	}
+	self.UpdateTime()
 }
 
 func (self *MetricData) UpdateTime() {
@@ -166,7 +167,6 @@ func (self *MetricsRecorder) Send() {
 	for ID, metric := range self.apps {
 		go func(ID string, metric *MetricData) {
 			defer self.wg.Done()
-			metric.UpdateTime()
 			metric.UpdateStats(ID)
 			metric.CalcRate()
 			self.client.GenSeries(ID, metric)
