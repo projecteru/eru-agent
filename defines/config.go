@@ -39,7 +39,7 @@ type RedisConfig struct {
 	Max  int
 }
 
-type MacvlanConfig struct {
+type VlanConfig struct {
 	Physical []string
 }
 
@@ -51,7 +51,7 @@ type AgentConfig struct {
 	Eru     EruConfig
 	Lenz    LenzConfig
 	Metrics MetricsConfig
-	Macvlan MacvlanConfig
+	Vlan    VlanConfig
 	Cleaner CleanerConfig
 	Redis   RedisConfig
 }

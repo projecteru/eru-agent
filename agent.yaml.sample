@@ -24,7 +24,7 @@ metrics:
   retention: default
   precision: s
 
-macvlan:
+vlan:
   physical:
     - em1
 
