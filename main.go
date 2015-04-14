@@ -53,7 +53,7 @@ func main() {
 	Vlan = NewVlanSetter()
 	Status = NewStatus()
 	Status.Load()
-	go VlanSetter.Watcher()
+	go Vlan.Watcher()
 	go Status.Watcher()
 	go Status.Listen()
 	go Metrics.Report()
