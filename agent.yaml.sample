@@ -24,6 +24,10 @@ metrics:
   retention: default
   precision: s
 
+macvlan:
+  physical:
+    - em1
+
 cleaner:
   interval: 10
   dir: /var/lib/docker/containers
