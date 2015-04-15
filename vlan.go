@@ -40,14 +40,16 @@ func (self *VlanSetter) Watcher() {
 
 	for message := range subs.Message() {
 		if message == nil {
+			logs.Info("VLan Watcher Shutdown")
 			break
 		}
 		command := string(message.Message)
 		logs.Debug("Add new Vlan", command)
 		parser := strings.Split(command, "|")
-		seq, containerID, ident := parser[0], parser[1], parser[2]
-		logs.Info("Add new Vlan to", containerID)
-		self.addVlan(seq, ident, containerID)
+		containerID, ident := parser[0], parser[1]
+		for _, seq := range parser[2:] {
+			self.addVlan(seq, ident, containerID)
+		}
 	}
 }
 
@@ -56,6 +58,7 @@ func (self *VlanSetter) addVlan(seq, ident, containerID string) {
 	// TODO report err
 	device, _ := self.Devices.Get(ident, 0)
 	vethName := fmt.Sprintf("%s%s.%s", common.VLAN_PREFIX, ident, seq)
+	logs.Info("Add new Vlan to", vethName, containerID)
 	cmd := exec.Command("ip", "link", "add", vethName, "link", device, "type", "macvlan", "mode", "bridge")
 	if err := cmd.Run(); err != nil {
 		//TODO report to core
