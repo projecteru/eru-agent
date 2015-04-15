@@ -45,17 +45,17 @@ func (self *VlanSetter) Watcher() {
 		command := string(message.Message)
 		logs.Debug("Add new Vlan", command)
 		parser := strings.Split(command, "|")
-		containerID, ident := parser[0], parser[1]
+		seq, containerID, ident := parser[0], parser[1], parser[2]
 		logs.Info("Add new Vlan to", containerID)
-		self.addVlan(ident, containerID)
+		self.addVlan(seq, ident, containerID)
 	}
 }
 
-func (self *VlanSetter) addVlan(ident, containerID string) {
+func (self *VlanSetter) addVlan(seq, ident, containerID string) {
 	// Add macvlan device
 	// TODO report err
 	device, _ := self.Devices.Get(ident, 0)
-	vethName := fmt.Sprintf("%s.%s", common.VLAN_PREFIX, ident)
+	vethName := fmt.Sprintf("%s%s.%s", common.VLAN_PREFIX, ident, seq)
 	cmd := exec.Command("ip", "link", "add", vethName, "link", device, "type", "macvlan", "mode", "bridge")
 	if err := cmd.Run(); err != nil {
 		//TODO report to core
