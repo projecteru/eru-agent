@@ -67,16 +67,24 @@ func (self *VlanSetter) addVlan(seq, ident, containerID string) {
 	}
 	container, err := common.Docker.InspectContainer(containerID)
 	if err != nil {
+		//TODO report to core
 		logs.Info("VlanSetter inspect docker failed", err)
+		self.delVlan(vethName)
 		return
 	}
 	cmd = exec.Command("ip", "link", "set", "netns", strconv.Itoa(container.State.Pid), vethName)
 	if err := cmd.Run(); err != nil {
 		//TODO report to core
 		logs.Info("Set macvlan device into container failed", err)
+		self.delVlan(vethName)
 		return
 	}
 	//TODO report to core
 	//TODO mission complete
 	logs.Info("Add VLAN device success", containerID, ident)
+}
+
+func (self *VlanSetter) delVlan(vethName string) {
+	cmd := exec.Command("ip", "link", "del", vethName)
+	cmd.Run()
 }
