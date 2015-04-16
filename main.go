@@ -20,7 +20,7 @@ var Lenz *lenz.LenzForwarder
 var Metrics *metrics.MetricsRecorder
 
 var Status *StatusMoniter
-var Vlan *VlanSetter
+var VLan *VLanSetter
 
 func main() {
 	LoadConfig()
@@ -50,10 +50,10 @@ func main() {
 	utils.WritePid(config.PidFile)
 	defer os.Remove(config.PidFile)
 
-	Vlan = NewVlanSetter()
+	VLan = NewVLanSetter()
 	Status = NewStatus()
 	Status.Load()
-	go Vlan.Watcher()
+	go VLan.Watcher()
 	go Status.Watcher()
 	go Status.Listen()
 	go Metrics.Report()
