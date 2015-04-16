@@ -72,7 +72,7 @@ func (self *StatusMoniter) Watcher() {
 	subs := gore.NewSubscriptions(conn)
 	defer subs.Close()
 	subKey := fmt.Sprintf("eru:agent:%s:watcher", config.HostName)
-	logs.Debug("Monitor taget", subKey)
+	logs.Debug("Watch New Container", subKey)
 	subs.Subscribe(subKey)
 
 	for message := range subs.Message() {

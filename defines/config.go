@@ -39,6 +39,10 @@ type RedisConfig struct {
 	Max  int
 }
 
+type VlanConfig struct {
+	Physical []string
+}
+
 type AgentConfig struct {
 	HostName string `yaml:"hostname"`
 	PidFile  string
@@ -47,6 +51,7 @@ type AgentConfig struct {
 	Eru     EruConfig
 	Lenz    LenzConfig
 	Metrics MetricsConfig
+	Vlan    VlanConfig
 	Cleaner CleanerConfig
 	Redis   RedisConfig
 }

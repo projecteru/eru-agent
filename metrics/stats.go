@@ -88,7 +88,7 @@ func GetNetStats(cid string) (result map[string]uint64, err error) {
 			}
 			ts := strings.Split(text, ":")
 			fmt.Sscanf(ts[0], "%s", &name)
-			if strings.HasPrefix(name, "veth") || name == "lo" {
+			if !strings.HasPrefix(name, common.VLAN_PREFIX) {
 				continue
 			}
 			fmt.Sscanf(ts[1],
