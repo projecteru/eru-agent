@@ -46,41 +46,47 @@ func (self *VLanSetter) Watcher() {
 		command := string(message.Message)
 		logs.Debug("Add new VLan", command)
 		parser := strings.Split(command, "|")
-		containerID, ident := parser[0], parser[1]
-		for _, seq := range parser[2:] {
-			self.addVLan(seq, ident, containerID)
+		taskID, containerID, ident := parser[0], parser[1], parser[2]
+		feedKey := fmt.Sprintf("eru:agent:%s:feedback", taskID)
+		for _, seq := range parser[3:] {
+			self.addVLan(feedKey, seq, ident, containerID)
 		}
 	}
 }
 
-func (self *VLanSetter) addVLan(seq, ident, containerID string) {
+func (self *VLanSetter) addVLan(feedKey, seq, ident, containerID string) {
+	conn, err := common.Rds.Acquire()
+	if err != nil || conn == nil {
+		logs.Info(err, "Get redis conn")
+		return
+	}
+	defer common.Rds.Release(conn)
+
 	// Add macvlan device
-	// TODO report err
 	device, _ := self.Devices.Get(ident, 0)
 	vethName := fmt.Sprintf("%s%s.%s", common.VLAN_PREFIX, ident, seq)
 	logs.Info("Add new VLan to", vethName, containerID)
 	cmd := exec.Command("ip", "link", "add", vethName, "link", device, "type", "macvlan", "mode", "bridge")
 	if err := cmd.Run(); err != nil {
-		//TODO report to core
+		gore.NewCommand("LPUSH", feedKey, fmt.Sprintf("0||")).Run(conn)
 		logs.Info("Create macvlan device failed", err)
 		return
 	}
 	container, err := common.Docker.InspectContainer(containerID)
 	if err != nil {
-		//TODO report to core
+		gore.NewCommand("LPUSH", feedKey, fmt.Sprintf("0||")).Run(conn)
 		logs.Info("VLanSetter inspect docker failed", err)
 		self.delVLan(vethName)
 		return
 	}
 	cmd = exec.Command("ip", "link", "set", "netns", strconv.Itoa(container.State.Pid), vethName)
 	if err := cmd.Run(); err != nil {
-		//TODO report to core
+		gore.NewCommand("LPUSH", feedKey, fmt.Sprintf("0||")).Run(conn)
 		logs.Info("Set macvlan device into container failed", err)
 		self.delVLan(vethName)
 		return
 	}
-	//TODO report to core
-	//TODO mission complete
+	gore.NewCommand("LPUSH", feedKey, fmt.Sprintf("1|%s|%s", containerID, vethName)).Run(conn)
 	logs.Info("Add VLAN device success", containerID, ident)
 }
 
