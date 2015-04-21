@@ -44,7 +44,6 @@ func main() {
 	)
 
 	Lenz = lenz.NewLenz(config.Lenz)
-	cleaner := lenz.NewCleaner(config.Cleaner)
 	Metrics = metrics.NewMetricsRecorder(config.HostName, config.Metrics)
 
 	utils.WritePid(config.PidFile)
@@ -57,7 +56,6 @@ func main() {
 	go Status.Watcher()
 	go Status.Listen()
 	go Metrics.Report()
-	go cleaner.Clean()
 
 	var c = make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
@@ -67,5 +65,4 @@ func main() {
 	signal.Notify(c, syscall.SIGQUIT)
 	logs.Info("Catch", <-c)
 	Metrics.Stop()
-	cleaner.Stop()
 }

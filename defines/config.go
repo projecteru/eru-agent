@@ -27,11 +27,6 @@ type MetricsConfig struct {
 	Precision      string
 }
 
-type CleanerConfig struct {
-	Interval int
-	Dir      string
-}
-
 type RedisConfig struct {
 	Host string
 	Port int
@@ -52,6 +47,5 @@ type AgentConfig struct {
 	Lenz    LenzConfig
 	Metrics MetricsConfig
 	VLan    VLanConfig
-	Cleaner CleanerConfig
 	Redis   RedisConfig
 }
