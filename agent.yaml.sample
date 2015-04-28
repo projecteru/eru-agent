@@ -9,6 +9,7 @@ docker:
   cert: cert.pem
   key: key.pem
   ca: ca.pem
+  health: 30
 
 lenz:
   forwards:
@@ -27,10 +28,6 @@ metrics:
 vlan:
   physical:
     - em1
-
-cleaner:
-  interval: 10
-  dir: /var/lib/docker/containers
 
 redis:
   host: 127.0.0.1

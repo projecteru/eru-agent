@@ -58,6 +58,7 @@ func main() {
 	go Status.Listen()
 	go Metrics.Report()
 	go cleaner.Clean()
+	go Ping()
 
 	var c = make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)

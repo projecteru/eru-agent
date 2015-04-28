@@ -22,6 +22,7 @@ type DockerWrapper struct {
 	RemoveImage      func(string) error
 	CreateExec       func(docker.CreateExecOptions) (*docker.Exec, error)
 	StartExec        func(string, docker.StartExecOptions) error
+	Ping             func() error
 }
 
 func NewDocker(endpoint, cert, key, ca string) *DockerWrapper {

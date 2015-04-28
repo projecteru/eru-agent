@@ -5,6 +5,7 @@ type DockerConfig struct {
 	Ca       string
 	Key      string
 	Cert     string
+	Health   int
 }
 
 type EruConfig struct {
