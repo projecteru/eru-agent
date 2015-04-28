@@ -56,6 +56,7 @@ func main() {
 	go Status.Watcher()
 	go Status.Listen()
 	go Metrics.Report()
+	go Ping()
 
 	var c = make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)

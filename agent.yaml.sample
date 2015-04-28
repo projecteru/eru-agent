@@ -9,6 +9,7 @@ docker:
   cert: cert.pem
   key: key.pem
   ca: ca.pem
+  health: 30
 
 lenz:
   forwards:
