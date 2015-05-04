@@ -38,17 +38,6 @@ func (self *StatusMoniter) Listen() {
 				delete(self.Apps, event.ID)
 				reportContainerDeath(event.ID)
 			}
-		case common.STATUS_START:
-			// if not in watching list, just ignore it
-			if isInWatchingSet(event.ID) {
-				container, err := common.Docker.InspectContainer(event.ID)
-				if err != nil {
-					logs.Info("Status inspect docker failed", err)
-				} else {
-					self.Add(event.ID, container.Name)
-					logs.Debug(event.ID, "cured, added in watching list")
-				}
-			}
 		}
 	}
 }
@@ -91,6 +80,7 @@ func (self *StatusMoniter) Watcher() {
 				logs.Info("Status inspect docker failed", err)
 			} else {
 				self.Add(containerID, container.Name)
+				logs.Debug(containerID, "cured, added in watching list")
 			}
 		}
 	}
@@ -155,22 +145,6 @@ func (self *StatusMoniter) Add(ID, containerName string) {
 	Metrics.Add(ID, app)
 	Lenz.Attacher.Attach(ID, app)
 	reportContainerCure(ID)
-}
-
-func isInWatchingSet(cid string) bool {
-	conn, err := common.Rds.Acquire()
-	if err != nil || conn == nil {
-		logs.Assert(err, "Get redis conn")
-	}
-	defer common.Rds.Release(conn)
-
-	containersKey := fmt.Sprintf("eru:agent:%s:containers", config.HostName)
-	rep, err := gore.NewCommand("SISMEMBER", containersKey, cid).Run(conn)
-	if err != nil {
-		logs.Assert(err, "Get targets")
-	}
-	repInt, _ := rep.Int()
-	return repInt == 1
 }
 
 func reportContainerDeath(cid string) {
