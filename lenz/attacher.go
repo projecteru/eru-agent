@@ -61,8 +61,8 @@ func (m *AttachManager) Attach(ID string, app *defines.App) {
 		}
 		m.send(&defines.AttachEvent{Type: "detach", ID: ID, App: app})
 		m.Lock()
+		defer m.Unlock()
 		delete(m.attached, ID)
-		m.Unlock()
 	}()
 	_, ok := <-success
 	if ok {
