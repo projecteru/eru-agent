@@ -4,6 +4,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/fsouza/go-dockerclient"
+
 	"../defines"
 	"../logs"
 )
@@ -31,13 +33,31 @@ type MetricData struct {
 	last_network map[string]uint64
 	network_rate map[string]float64
 
-	t time.Time
+	t    time.Time
+	exec *docker.Exec
 }
 
 func NewMetricData(app *defines.App) *MetricData {
 	m := &MetricData{}
 	m.app = app
 	return m
+}
+
+func (self *MetricData) SetExec(cid string) (err error) {
+	self.exec, err = common.Docker.CreateExec(
+		docker.CreateExecOptions{
+			AttachStdout: true,
+			Cmd: []string{
+				"cat", "/proc/net/dev",
+			},
+			Container: cid,
+		},
+	)
+	if err != nil {
+		return
+	}
+	logs.Debug("Create exec id", self.exec.ID)
+	return
 }
 
 func (self *MetricData) UpdateStats(ID string) bool {
@@ -54,7 +74,7 @@ func (self *MetricData) UpdateStats(ID string) bool {
 	self.mem_max_usage = stats.MemoryStats.MaxUsage
 	self.mem_rss = stats.MemoryStats.Stats["rss"]
 
-	if self.network, err = GetNetStats(ID); err != nil {
+	if self.network, err = GetNetStats(self.exec); err != nil {
 		logs.Info(err)
 		return false
 	}
@@ -127,6 +147,10 @@ func (self *MetricsRecorder) Add(ID string, app *defines.App) {
 	//TODO workaround for waiting device ready
 	metric := NewMetricData(app)
 	time.Sleep(1 * time.Second)
+	if err := metric.SetExec(cid); err != nil {
+		logs.Info("Create Exec Command Failed", err)
+		return
+	}
 	metric.UpdateTime()
 	metric.UpdateStats(ID)
 	metric.SaveLast()

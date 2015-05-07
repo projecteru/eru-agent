@@ -36,21 +36,7 @@ func getLongID(shortID string) (parentName string, longID string, pid int, err e
 	return
 }
 
-func GetNetStats(cid string) (result map[string]uint64, err error) {
-	var exec *docker.Exec
-	exec, err = common.Docker.CreateExec(
-		docker.CreateExecOptions{
-			AttachStdout: true,
-			Cmd: []string{
-				"cat", "/proc/net/dev",
-			},
-			Container: cid,
-		},
-	)
-	if err != nil {
-		return
-	}
-	logs.Debug("Create exec id", exec.ID)
+func GetNetStats(exec *docker.Exec) (result map[string]uint64, err error) {
 	outr, outw := io.Pipe()
 	defer outr.Close()
 
@@ -102,7 +88,7 @@ func GetNetStats(cid string) (result map[string]uint64, err error) {
 			result[name+".outerrs"] = n[6]
 			result[name+".outdrop"] = n[7]
 		}
-		logs.Debug("Container net status", cid, result)
+		logs.Debug("Container net status", result)
 		return
 	}
 	err = <-failure
