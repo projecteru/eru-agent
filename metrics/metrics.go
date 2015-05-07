@@ -6,6 +6,7 @@ import (
 
 	"github.com/fsouza/go-dockerclient"
 
+	"../common"
 	"../defines"
 	"../logs"
 )
@@ -147,7 +148,7 @@ func (self *MetricsRecorder) Add(ID string, app *defines.App) {
 	//TODO workaround for waiting device ready
 	metric := NewMetricData(app)
 	time.Sleep(1 * time.Second)
-	if err := metric.SetExec(cid); err != nil {
+	if err := metric.SetExec(ID); err != nil {
 		logs.Info("Create Exec Command Failed", err)
 		return
 	}
