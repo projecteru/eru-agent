@@ -120,18 +120,22 @@ func NewMetricsRecorder(hostname string, config defines.MetricsConfig) *MetricsR
 
 func (self *MetricsRecorder) Add(ID string, app *defines.App) {
 	self.mu.Lock()
+	defer self.mu.Unlock()
 	if _, ok := self.apps[ID]; ok {
 		return
 	}
-	self.apps[ID] = NewMetricData(app)
+	c := make(chan *MetricData)
+	defer close(c)
 	go func() {
 		//TODO workaround for waiting device ready
-		defer self.mu.Unlock()
+		metric := NewMetricData(app)
 		time.Sleep(1 * time.Second)
-		self.apps[ID].UpdateTime()
-		self.apps[ID].UpdateStats(ID)
-		self.apps[ID].SaveLast()
+		metric.UpdateTime()
+		metric.UpdateStats(ID)
+		metric.SaveLast()
+		c <- metric
 	}()
+	self.apps[ID] = <-c
 }
 
 func (self *MetricsRecorder) Remove(ID string) {
