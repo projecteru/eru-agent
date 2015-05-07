@@ -124,18 +124,13 @@ func (self *MetricsRecorder) Add(ID string, app *defines.App) {
 	if _, ok := self.apps[ID]; ok {
 		return
 	}
-	c := make(chan *MetricData)
-	defer close(c)
-	go func() {
-		//TODO workaround for waiting device ready
-		metric := NewMetricData(app)
-		time.Sleep(1 * time.Second)
-		metric.UpdateTime()
-		metric.UpdateStats(ID)
-		metric.SaveLast()
-		c <- metric
-	}()
-	self.apps[ID] = <-c
+	//TODO workaround for waiting device ready
+	metric := NewMetricData(app)
+	time.Sleep(1 * time.Second)
+	metric.UpdateTime()
+	metric.UpdateStats(ID)
+	metric.SaveLast()
+	self.apps[ID] = metric
 }
 
 func (self *MetricsRecorder) Remove(ID string) {
