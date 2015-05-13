@@ -34,7 +34,7 @@ func (self *StatusMoniter) Listen() {
 		case common.STATUS_DIE:
 			// Check if exists
 			if _, ok := self.Apps[event.ID]; ok {
-				Metrics.Remove(event.ID)
+				go Metrics.Remove(event.ID)
 				delete(self.Apps, event.ID)
 				reportContainerDeath(event.ID)
 			}
@@ -152,7 +152,7 @@ func (self *StatusMoniter) Add(ID, containerName string) {
 	logs.Debug("Container", name, entrypoint, ident)
 	app := &defines.App{name, entrypoint, ident}
 	self.Apps[ID] = app
-	Metrics.Add(ID, app)
+	go Metrics.Add(ID, app)
 	Lenz.Attacher.Attach(ID, app)
 	reportContainerCure(ID)
 }

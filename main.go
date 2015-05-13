@@ -51,8 +51,8 @@ func main() {
 
 	VLan = NewVLanSetter()
 	Status = NewStatus()
-	Status.Load()
 	go VLan.Watcher()
+	Status.Load()
 	go Status.Watcher()
 	go Status.Listen()
 	go Metrics.Report()
