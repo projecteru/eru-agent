@@ -119,7 +119,7 @@ func (self *MetricData) UpdateTime() {
 }
 
 type MetricsRecorder struct {
-	mu     *sync.Mutex
+	sync.RWMutex
 	apps   map[string]*MetricData
 	client *InfluxDBClient
 	stop   chan bool
@@ -130,7 +130,6 @@ type MetricsRecorder struct {
 func NewMetricsRecorder(hostname string, config defines.MetricsConfig) *MetricsRecorder {
 	InitDevDir()
 	r := &MetricsRecorder{}
-	r.mu = &sync.Mutex{}
 	r.wg = &sync.WaitGroup{}
 	r.apps = map[string]*MetricData{}
 	r.client = NewInfluxDBClient(hostname, config)
@@ -140,8 +139,8 @@ func NewMetricsRecorder(hostname string, config defines.MetricsConfig) *MetricsR
 }
 
 func (self *MetricsRecorder) Add(ID string, app *defines.App) {
-	self.mu.Lock()
-	defer self.mu.Unlock()
+	self.Lock()
+	defer self.Unlock()
 	if _, ok := self.apps[ID]; ok {
 		return
 	}
@@ -161,8 +160,8 @@ func (self *MetricsRecorder) Add(ID string, app *defines.App) {
 }
 
 func (self *MetricsRecorder) Remove(ID string) {
-	self.mu.Lock()
-	defer self.mu.Unlock()
+	self.Lock()
+	defer self.Unlock()
 	if _, ok := self.apps[ID]; !ok {
 		return
 	}
@@ -187,8 +186,8 @@ func (self *MetricsRecorder) Stop() {
 }
 
 func (self *MetricsRecorder) Send() {
-	self.mu.Lock()
-	defer self.mu.Unlock()
+	self.RLock()
+	defer self.RUnlock()
 	apps := len(self.apps)
 	if apps <= 0 {
 		return
@@ -197,9 +196,8 @@ func (self *MetricsRecorder) Send() {
 	for ID, metric := range self.apps {
 		go func(ID string, metric *MetricData) {
 			defer self.wg.Done()
-			if !metric.UpdateStats(ID) {
-				delete(self.apps, ID)
-			}
+			// use RWMutex
+			metric.UpdateStats(ID)
 			metric.CalcRate()
 			self.client.GenSeries(ID, metric)
 			metric.SaveLast()
