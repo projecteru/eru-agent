@@ -153,7 +153,9 @@ func (self *MetricsRecorder) Add(ID string, app *defines.App) {
 		return
 	}
 	metric.UpdateTime()
-	metric.UpdateStats(ID)
+	if !metric.UpdateStats(ID) {
+		return
+	}
 	metric.SaveLast()
 	self.apps[ID] = metric
 }
@@ -195,7 +197,9 @@ func (self *MetricsRecorder) Send() {
 	for ID, metric := range self.apps {
 		go func(ID string, metric *MetricData) {
 			defer self.wg.Done()
-			metric.UpdateStats(ID)
+			if !metric.UpdateStats(ID) {
+				delete(self.apps, ID)
+			}
 			metric.CalcRate()
 			self.client.GenSeries(ID, metric)
 			metric.SaveLast()
