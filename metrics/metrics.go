@@ -146,7 +146,7 @@ func (self *MetricsRecorder) Add(ID string, app *defines.App) {
 	}
 	//TODO workaround for waiting device ready
 	metric := NewMetricData(app)
-	time.Sleep(1 * time.Second)
+	time.Sleep(100 * time.Millisecond)
 	if err := metric.SetExec(ID); err != nil {
 		logs.Info("Create Exec Command Failed", err)
 		return
@@ -197,7 +197,9 @@ func (self *MetricsRecorder) Send() {
 		go func(ID string, metric *MetricData) {
 			defer self.wg.Done()
 			// use RWMutex
-			metric.UpdateStats(ID)
+			if !metric.UpdateStats(ID) {
+				return
+			}
 			metric.CalcRate()
 			self.client.GenSeries(ID, metric)
 			metric.SaveLast()
