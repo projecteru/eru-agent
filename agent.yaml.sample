@@ -17,6 +17,7 @@ lenz:
   stdout: False
 
 metrics:
+  root: /run/docker/execdriver/native
   reportinterval: 10
   host: http://10.1.201.43:8086
   username: root
