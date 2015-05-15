@@ -19,6 +19,7 @@ type LenzConfig struct {
 }
 
 type MetricsConfig struct {
+	Root           string
 	ReportInterval int
 	Host           string
 	Username       string

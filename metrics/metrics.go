@@ -1,9 +1,15 @@
 package metrics
 
 import (
+	"bufio"
+	"fmt"
+	"io"
+	"strings"
 	"sync"
 	"time"
 
+	"github.com/docker/libcontainer"
+	"github.com/docker/libcontainer/cgroups"
 	"github.com/fsouza/go-dockerclient"
 
 	"../common"
@@ -34,39 +40,86 @@ type MetricData struct {
 	last_network map[string]uint64
 	network_rate map[string]float64
 
-	t    time.Time
-	exec *docker.Exec
+	t         time.Time
+	exec      *docker.Exec
+	container libcontainer.Container
 }
 
-func NewMetricData(app *defines.App) *MetricData {
+func NewMetricData(app *defines.App, container libcontainer.Container) *MetricData {
 	m := &MetricData{}
 	m.app = app
+	m.container = container
 	return m
 }
 
-func (self *MetricData) SetExec(cid string) (err error) {
-	self.exec, err = common.Docker.CreateExec(
-		docker.CreateExecOptions{
-			AttachStdout: true,
-			Cmd: []string{
-				"cat", "/proc/net/dev",
+func GetNetStats(exec *docker.Exec) (result map[string]uint64, err error) {
+	outr, outw := io.Pipe()
+	defer outr.Close()
+
+	success := make(chan struct{})
+	failure := make(chan error)
+	go func() {
+		// TODO: 防止被err流block, 删掉先, 之后记得补上
+		err = common.Docker.StartExec(
+			exec.ID,
+			docker.StartExecOptions{
+				OutputStream: outw,
+				Success:      success,
 			},
-			Container: cid,
-		},
-	)
-	if err != nil {
+		)
+		outw.Close()
+		if err != nil {
+			close(success)
+			failure <- err
+		}
+	}()
+	if _, ok := <-success; ok {
+		success <- struct{}{}
+		result = map[string]uint64{}
+		s := bufio.NewScanner(outr)
+		var d uint64
+		for s.Scan() {
+			var name string
+			var n [8]uint64
+			text := s.Text()
+			if strings.Index(text, ":") < 1 {
+				continue
+			}
+			ts := strings.Split(text, ":")
+			fmt.Sscanf(ts[0], "%s", &name)
+			if !strings.HasPrefix(name, common.VLAN_PREFIX) {
+				continue
+			}
+			fmt.Sscanf(ts[1],
+				"%d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d",
+				&n[0], &n[1], &n[2], &n[3], &d, &d, &d, &d,
+				&n[4], &n[5], &n[6], &n[7], &d, &d, &d, &d,
+			)
+			result[name+".inbytes"] = n[0]
+			result[name+".inpackets"] = n[1]
+			result[name+".inerrs"] = n[2]
+			result[name+".indrop"] = n[3]
+			result[name+".outbytes"] = n[4]
+			result[name+".outpackets"] = n[5]
+			result[name+".outerrs"] = n[6]
+			result[name+".outdrop"] = n[7]
+		}
+		logs.Debug("Container net status", result)
 		return
 	}
-	logs.Debug("Create exec id", self.exec.ID)
-	return
+	err = <-failure
+	return nil, err
 }
 
-func (self *MetricData) UpdateStats(ID string) bool {
-	stats, err := GetCgroupStats(ID)
-	if err != nil {
+func (self *MetricData) UpdateStats() bool {
+	var stats *cgroups.Stats
+	if s, err := self.container.Stats(); err != nil {
 		logs.Info("Get Stats Failed", err)
 		return false
+	} else {
+		stats = s.CgroupStats
 	}
+
 	self.cpu_user = stats.CpuStats.CpuUsage.UsageInUsermode
 	self.cpu_system = stats.CpuStats.CpuUsage.UsageInKernelmode
 	self.cpu_usage = stats.CpuStats.CpuUsage.TotalUsage
@@ -75,6 +128,7 @@ func (self *MetricData) UpdateStats(ID string) bool {
 	self.mem_max_usage = stats.MemoryStats.MaxUsage
 	self.mem_rss = stats.MemoryStats.Stats["rss"]
 
+	var err error
 	if self.network, err = GetNetStats(self.exec); err != nil {
 		logs.Info(err)
 		return false
@@ -114,27 +168,47 @@ func (self *MetricData) CalcRate() {
 	self.UpdateTime()
 }
 
+func (self *MetricData) SetExec() (err error) {
+	cid := self.container.ID()
+	self.exec, err = common.Docker.CreateExec(
+		docker.CreateExecOptions{
+			AttachStdout: true,
+			Cmd: []string{
+				"cat", "/proc/net/dev",
+			},
+			Container: cid,
+		},
+	)
+	if err != nil {
+		return
+	}
+	logs.Debug("Create exec id", self.exec.ID)
+	return
+}
+
 func (self *MetricData) UpdateTime() {
 	self.t = time.Now()
 }
 
 type MetricsRecorder struct {
 	sync.RWMutex
-	apps   map[string]*MetricData
-	client *InfluxDBClient
-	stop   chan bool
-	t      int
-	wg     *sync.WaitGroup
+	apps    map[string]*MetricData
+	client  *InfluxDBClient
+	stop    chan bool
+	t       int
+	wg      *sync.WaitGroup
+	factory libcontainer.Factory
 }
 
 func NewMetricsRecorder(hostname string, config defines.MetricsConfig) *MetricsRecorder {
-	InitDevDir()
 	r := &MetricsRecorder{}
 	r.wg = &sync.WaitGroup{}
 	r.apps = map[string]*MetricData{}
 	r.client = NewInfluxDBClient(hostname, config)
 	r.t = config.ReportInterval
 	r.stop = make(chan bool)
+	//TODO Ignore error
+	r.factory, _ = libcontainer.New(config.Root)
 	return r
 }
 
@@ -144,15 +218,20 @@ func (self *MetricsRecorder) Add(ID string, app *defines.App) {
 	if _, ok := self.apps[ID]; ok {
 		return
 	}
-	//TODO workaround for waiting device ready
-	metric := NewMetricData(app)
-	time.Sleep(100 * time.Millisecond)
-	if err := metric.SetExec(ID); err != nil {
+
+	container, err := self.factory.Load(ID)
+	if err != nil {
+		logs.Info("Load Container Failed", err)
+		return
+	}
+	metric := NewMetricData(app, container)
+	if err := metric.SetExec(); err != nil {
 		logs.Info("Create Exec Command Failed", err)
 		return
 	}
 	metric.UpdateTime()
-	if !metric.UpdateStats(ID) {
+	if !metric.UpdateStats() {
+		logs.Info("Update Stats Failed", ID)
 		return
 	}
 	metric.SaveLast()
@@ -197,7 +276,8 @@ func (self *MetricsRecorder) Send() {
 		go func(ID string, metric *MetricData) {
 			defer self.wg.Done()
 			// use RWMutex
-			if !metric.UpdateStats(ID) {
+			if !metric.UpdateStats() {
+				logs.Info("Update Stats Failed", ID)
 				return
 			}
 			metric.CalcRate()
