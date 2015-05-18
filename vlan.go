@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"net"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -9,6 +10,7 @@ import (
 	"./common"
 	"./logs"
 	"github.com/CMGS/consistent"
+	"github.com/docker/libcontainer/netlink"
 	"github.com/keimoon/gore"
 )
 
@@ -77,12 +79,15 @@ func (self *VLanSetter) addVLan(feedKey, content, ident, containerID string) {
 	device, _ := self.Devices.Get(ident, 0)
 	vethName := fmt.Sprintf("%s%s.%s", common.VLAN_PREFIX, ident, seq)
 	logs.Info("Add new VLan to", vethName, containerID)
-	cmd := exec.Command("ip", "link", "add", vethName, "link", device, "type", "macvlan", "mode", "bridge")
-	if err := cmd.Run(); err != nil {
+
+	// Create device
+	if err := netlink.NetworkLinkAddMacVlan(device, vethName, "bridge"); err != nil {
 		gore.NewCommand("LPUSH", feedKey, fmt.Sprintf("0|||")).Run(conn)
 		logs.Info("Create macvlan device failed", err)
 		return
 	}
+
+	// Get Pid
 	container, err := common.Docker.InspectContainer(containerID)
 	if err != nil {
 		gore.NewCommand("LPUSH", feedKey, fmt.Sprintf("0|||")).Run(conn)
@@ -91,13 +96,16 @@ func (self *VLanSetter) addVLan(feedKey, content, ident, containerID string) {
 		return
 	}
 	pid := strconv.Itoa(container.State.Pid)
-	cmd = exec.Command("ip", "link", "set", "netns", pid, vethName)
-	if err := cmd.Run(); err != nil {
+
+	// Set into container
+	ifc, _ := net.InterfaceByName(vethName)
+	if err := netlink.NetworkSetNsPid(ifc, pid); err != nil {
 		gore.NewCommand("LPUSH", feedKey, fmt.Sprintf("0|||")).Run(conn)
 		logs.Info("Set macvlan device into container failed", err)
 		self.delVLan(vethName)
 		return
 	}
+
 	cmd = exec.Command("nsenter", "-t", pid, "-n", "ip", "addr", "add", ips, "dev", vethName)
 	if err := cmd.Run(); err != nil {
 		gore.NewCommand("LPUSH", feedKey, fmt.Sprintf("0|||")).Run(conn)
@@ -115,6 +123,7 @@ func (self *VLanSetter) addVLan(feedKey, content, ident, containerID string) {
 }
 
 func (self *VLanSetter) delVLan(vethName string) {
-	cmd := exec.Command("ip", "link", "del", vethName)
-	cmd.Run()
+	if err := netlink.NetworkLinkDel(vethName); err != nil {
+		logs.Debug("Delete device failed", err)
+	}
 }
