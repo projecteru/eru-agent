@@ -2,6 +2,7 @@ package metrics
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -135,6 +136,9 @@ func (self *MetricsRecorder) doSend(ID string, metric *MetricData) {
 		}
 		m := []*model.MetricValue{}
 		for k, d := range metric.info {
+			if !strings.HasPrefix(k, "mem") {
+				continue
+			}
 			m = append(m, self.newMetricValue(name, k, d, tag, now))
 		}
 		for k, d := range metric.rate {
