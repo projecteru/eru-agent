@@ -1,214 +1,50 @@
 package metrics
 
 import (
-	"bufio"
 	"fmt"
-	"io"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/CMGS/consistent"
 	"github.com/docker/libcontainer"
-	"github.com/docker/libcontainer/cgroups"
-	"github.com/fsouza/go-dockerclient"
+	"github.com/open-falcon/agent/g"
+	"github.com/open-falcon/common/model"
 
-	"../common"
 	"../defines"
 	"../logs"
 )
 
-type MetricData struct {
-	app *defines.App
-
-	mem_usage     uint64
-	mem_max_usage uint64
-	mem_rss       uint64
-
-	cpu_user   uint64
-	cpu_system uint64
-	cpu_usage  uint64
-
-	last_cpu_user   uint64
-	last_cpu_system uint64
-	last_cpu_usage  uint64
-
-	cpu_user_rate   float64
-	cpu_system_rate float64
-	cpu_usage_rate  float64
-
-	network      map[string]uint64
-	last_network map[string]uint64
-	network_rate map[string]float64
-
-	t         time.Time
-	exec      *docker.Exec
-	container libcontainer.Container
-}
-
-func NewMetricData(app *defines.App, container libcontainer.Container) *MetricData {
-	m := &MetricData{}
-	m.app = app
-	m.container = container
-	return m
-}
-
-func GetNetStats(exec *docker.Exec) (result map[string]uint64, err error) {
-	outr, outw := io.Pipe()
-	defer outr.Close()
-
-	success := make(chan struct{})
-	failure := make(chan error)
-	go func() {
-		// TODO: 防止被err流block, 删掉先, 之后记得补上
-		err = common.Docker.StartExec(
-			exec.ID,
-			docker.StartExecOptions{
-				OutputStream: outw,
-				Success:      success,
-			},
-		)
-		outw.Close()
-		if err != nil {
-			close(success)
-			failure <- err
-		}
-	}()
-	if _, ok := <-success; ok {
-		success <- struct{}{}
-		result = map[string]uint64{}
-		s := bufio.NewScanner(outr)
-		var d uint64
-		for s.Scan() {
-			var name string
-			var n [8]uint64
-			text := s.Text()
-			if strings.Index(text, ":") < 1 {
-				continue
-			}
-			ts := strings.Split(text, ":")
-			fmt.Sscanf(ts[0], "%s", &name)
-			if !strings.HasPrefix(name, common.VLAN_PREFIX) {
-				continue
-			}
-			fmt.Sscanf(ts[1],
-				"%d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d",
-				&n[0], &n[1], &n[2], &n[3], &d, &d, &d, &d,
-				&n[4], &n[5], &n[6], &n[7], &d, &d, &d, &d,
-			)
-			result[name+".inbytes"] = n[0]
-			result[name+".inpackets"] = n[1]
-			result[name+".inerrs"] = n[2]
-			result[name+".indrop"] = n[3]
-			result[name+".outbytes"] = n[4]
-			result[name+".outpackets"] = n[5]
-			result[name+".outerrs"] = n[6]
-			result[name+".outdrop"] = n[7]
-		}
-		logs.Debug("Container net status", result)
-		return
-	}
-	err = <-failure
-	return nil, err
-}
-
-func (self *MetricData) UpdateStats() bool {
-	var stats *cgroups.Stats
-	if s, err := self.container.Stats(); err != nil {
-		logs.Info("Get Stats Failed", err)
-		return false
-	} else {
-		stats = s.CgroupStats
-	}
-
-	self.cpu_user = stats.CpuStats.CpuUsage.UsageInUsermode
-	self.cpu_system = stats.CpuStats.CpuUsage.UsageInKernelmode
-	self.cpu_usage = stats.CpuStats.CpuUsage.TotalUsage
-
-	self.mem_usage = stats.MemoryStats.Usage
-	self.mem_max_usage = stats.MemoryStats.MaxUsage
-	self.mem_rss = stats.MemoryStats.Stats["rss"]
-
-	var err error
-	if self.network, err = GetNetStats(self.exec); err != nil {
-		logs.Info(err)
-		return false
-	}
-	return true
-}
-
-func (self *MetricData) SaveLast() {
-	self.last_cpu_user = self.cpu_user
-	self.last_cpu_system = self.cpu_system
-	self.last_cpu_usage = self.cpu_usage
-	self.last_network = map[string]uint64{}
-	for key, data := range self.network {
-		self.last_network[key] = data
-	}
-}
-
-func (self *MetricData) CalcRate() {
-	t := time.Now().Sub(self.t)
-	nano_t := float64(t.Nanoseconds())
-	if self.cpu_user > self.last_cpu_user {
-		self.cpu_user_rate = float64(self.cpu_user-self.last_cpu_user) / nano_t
-	}
-	if self.cpu_system > self.last_cpu_system {
-		self.cpu_system_rate = float64(self.cpu_system-self.last_cpu_system) / nano_t
-	}
-	if self.cpu_usage > self.last_cpu_usage {
-		self.cpu_usage_rate = float64(self.cpu_usage-self.last_cpu_usage) / nano_t
-	}
-	second_t := t.Seconds()
-	self.network_rate = map[string]float64{}
-	for key, data := range self.network {
-		if data >= self.last_network[key] {
-			self.network_rate[key+".rate"] = float64(data-self.last_network[key]) / second_t
-		}
-	}
-	self.UpdateTime()
-}
-
-func (self *MetricData) SetExec() (err error) {
-	cid := self.container.ID()
-	self.exec, err = common.Docker.CreateExec(
-		docker.CreateExecOptions{
-			AttachStdout: true,
-			Cmd: []string{
-				"cat", "/proc/net/dev",
-			},
-			Container: cid,
-		},
-	)
-	if err != nil {
-		return
-	}
-	logs.Debug("Create exec id", self.exec.ID)
-	return
-}
-
-func (self *MetricData) UpdateTime() {
-	self.t = time.Now()
-}
-
 type MetricsRecorder struct {
 	sync.RWMutex
-	apps    map[string]*MetricData
-	client  *InfluxDBClient
-	stop    chan bool
-	t       int
-	wg      *sync.WaitGroup
-	factory libcontainer.Factory
+	apps      map[string]*MetricData
+	stop      chan bool
+	step      int64
+	hostname  string
+	transfers *consistent.Consistent
+	clients   map[string]g.SingleConnRpcClient
+	factory   libcontainer.Factory
 }
 
 func NewMetricsRecorder(hostname string, config defines.MetricsConfig) *MetricsRecorder {
 	r := &MetricsRecorder{}
-	r.wg = &sync.WaitGroup{}
 	r.apps = map[string]*MetricData{}
-	r.client = NewInfluxDBClient(hostname, config)
-	r.t = config.ReportInterval
+	r.step = config.Step
 	r.stop = make(chan bool)
-	//TODO Ignore error
-	r.factory, _ = libcontainer.New(config.Root)
+	r.transfers = consistent.New()
+	r.hostname = hostname
+	r.clients = map[string]g.SingleConnRpcClient{}
+	for _, transfer := range config.Transfers {
+		r.transfers.Add(transfer)
+		r.clients[transfer] = g.SingleConnRpcClient{
+			RpcServer: transfer,
+			Timeout:   time.Duration(config.Timeout) * time.Millisecond,
+		}
+	}
+	var err error
+	if r.factory, err = libcontainer.New(config.Root); err != nil {
+		logs.Assert(err, "Load containers dir failed")
+	}
 	return r
 }
 
@@ -251,7 +87,7 @@ func (self *MetricsRecorder) Report() {
 	defer close(self.stop)
 	for {
 		select {
-		case <-time.After(time.Second * time.Duration(self.t)):
+		case <-time.After(time.Second * time.Duration(self.step)):
 			self.Send()
 		case <-self.stop:
 			logs.Info("Metrics Stop")
@@ -271,20 +107,62 @@ func (self *MetricsRecorder) Send() {
 	if apps <= 0 {
 		return
 	}
-	self.wg.Add(apps)
 	for ID, metric := range self.apps {
 		go func(ID string, metric *MetricData) {
-			defer self.wg.Done()
-			// use RWMutex
 			if !metric.UpdateStats() {
 				logs.Info("Update Stats Failed", ID)
 				return
 			}
 			metric.CalcRate()
-			self.client.GenSeries(ID, metric)
+			self.doSend(ID, metric)
 			metric.SaveLast()
 		}(ID, metric)
 	}
-	self.wg.Wait()
-	self.client.Send()
+}
+
+func (self *MetricsRecorder) doSend(ID string, metric *MetricData) {
+	tag := fmt.Sprintf(
+		"hostname=%s,cid=%s,ident=%s",
+		self.hostname, ID[:12], metric.app.Ident,
+	)
+	name := fmt.Sprintf("%s-%s", metric.app.Name, metric.app.EntryPoint)
+	now := metric.last.Unix()
+	for offset := 0; offset < self.transfers.Len(); offset++ {
+		addr, err := self.transfers.Get(ID, offset)
+		client := self.clients[addr]
+		if err != nil {
+			logs.Info("Get transfer failed", err, ID, metric.app.Name)
+			break
+		}
+		m := []*model.MetricValue{}
+		for k, d := range metric.info {
+			if !strings.HasPrefix(k, "mem") {
+				continue
+			}
+			m = append(m, self.newMetricValue(name, k, d, tag, now))
+		}
+		for k, d := range metric.rate {
+			m = append(m, self.newMetricValue(name, k, d, tag, now))
+		}
+		var resp model.TransferResponse
+		if err := client.Call("Transfer.Update", m, &resp); err != nil {
+			logs.Debug("call Transfer.Update fail", err)
+		} else {
+			logs.Debug(name, &resp)
+			break
+		}
+	}
+}
+
+func (self *MetricsRecorder) newMetricValue(endpoint, metric string, value interface{}, tags string, now int64) *model.MetricValue {
+	mv := &model.MetricValue{
+		Endpoint:  endpoint,
+		Metric:    metric,
+		Value:     value,
+		Step:      self.step,
+		Type:      "GAUGE",
+		Tags:      tags,
+		Timestamp: now,
+	}
+	return mv
 }

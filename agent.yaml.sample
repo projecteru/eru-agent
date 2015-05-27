@@ -18,13 +18,10 @@ lenz:
 
 metrics:
   root: /run/docker/execdriver/native
-  reportinterval: 10
-  host: http://10.1.201.43:8086
-  username: root
-  password: root
-  database: test
-  retention: default
-  precision: s
+  step: 30
+  timeout: 1000
+  transfers:
+    - 10.1.201.45:8433
 
 vlan:
   physical:

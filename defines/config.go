@@ -19,14 +19,10 @@ type LenzConfig struct {
 }
 
 type MetricsConfig struct {
-	Root           string
-	ReportInterval int
-	Host           string
-	Username       string
-	Password       string
-	Database       string
-	Retention      string
-	Precision      string
+	Root      string
+	Step      int64
+	Timeout   int64
+	Transfers []string
 }
 
 type RedisConfig struct {
