@@ -16,37 +16,23 @@ import (
 )
 
 type MetricData struct {
-	app *defines.App
-
-	mem_usage     uint64
-	mem_max_usage uint64
-	mem_rss       uint64
-
-	cpu_user   uint64
-	cpu_system uint64
-	cpu_usage  uint64
-
-	last_cpu_user   uint64
-	last_cpu_system uint64
-	last_cpu_usage  uint64
-
-	cpu_user_rate   float64
-	cpu_system_rate float64
-	cpu_usage_rate  float64
-
-	network      map[string]uint64
-	last_network map[string]uint64
-	network_rate map[string]float64
-
-	t         time.Time
+	app       *defines.App
+	last      time.Time
 	exec      *docker.Exec
 	container libcontainer.Container
+
+	info map[string]uint64
+	save map[string]uint64
+	rate map[string]float64
 }
 
 func NewMetricData(app *defines.App, container libcontainer.Container) *MetricData {
 	m := &MetricData{}
 	m.app = app
 	m.container = container
+	m.info = map[string]uint64{}
+	m.save = map[string]uint64{}
+	m.rate = map[string]float64{}
 	return m
 }
 
@@ -118,50 +104,49 @@ func (self *MetricData) UpdateStats() bool {
 		stats = s.CgroupStats
 	}
 
-	self.cpu_user = stats.CpuStats.CpuUsage.UsageInUsermode
-	self.cpu_system = stats.CpuStats.CpuUsage.UsageInKernelmode
-	self.cpu_usage = stats.CpuStats.CpuUsage.TotalUsage
+	self.info["cpu_user"] = stats.CpuStats.CpuUsage.UsageInUsermode
+	self.info["cpu_system"] = stats.CpuStats.CpuUsage.UsageInKernelmode
+	self.info["cpu_usage"] = stats.CpuStats.CpuUsage.TotalUsage
+	self.info["mem_usage"] = stats.MemoryStats.Usage
+	self.info["mem_max_usage"] = stats.MemoryStats.MaxUsage
+	self.info["mem_rss"] = stats.MemoryStats.Stats["rss"]
 
-	self.mem_usage = stats.MemoryStats.Usage
-	self.mem_max_usage = stats.MemoryStats.MaxUsage
-	self.mem_rss = stats.MemoryStats.Stats["rss"]
-
-	var err error
-	if self.network, err = GetNetStats(self.exec); err != nil {
+	if network, err := GetNetStats(self.exec); err != nil {
 		logs.Info(err)
 		return false
+	} else {
+		for k, d := range network {
+			self.info[k] = d
+		}
 	}
 	return true
 }
 
 func (self *MetricData) SaveLast() {
-	self.last_cpu_user = self.cpu_user
-	self.last_cpu_system = self.cpu_system
-	self.last_cpu_usage = self.cpu_usage
-	self.last_network = map[string]uint64{}
-	for key, data := range self.network {
-		self.last_network[key] = data
+	for k, d := range self.info {
+		self.save[k] = d
 	}
+	self.info = map[string]uint64{}
 }
 
 func (self *MetricData) CalcRate() {
-	t := time.Now().Sub(self.t)
-	nano_t := float64(t.Nanoseconds())
-	if self.cpu_user > self.last_cpu_user {
-		self.cpu_user_rate = float64(self.cpu_user-self.last_cpu_user) / nano_t
+	delta := time.Now().Sub(self.last)
+	nano_t := float64(delta.Nanoseconds())
+	if self.info["cpu_user"] > self.save["cpu_user"] {
+		self.rate["cpu_user_rate"] = float64(self.info["cpu_user"]-self.save["cpu_user"]) / nano_t
 	}
-	if self.cpu_system > self.last_cpu_system {
-		self.cpu_system_rate = float64(self.cpu_system-self.last_cpu_system) / nano_t
+	if self.info["cpu_system"] > self.save["cpu_system"] {
+		self.rate["cpu_system_rate"] = float64(self.info["cpu_system"]-self.save["cpu_system"]) / nano_t
 	}
-	if self.cpu_usage > self.last_cpu_usage {
-		self.cpu_usage_rate = float64(self.cpu_usage-self.last_cpu_usage) / nano_t
+	if self.info["cpu_usage"] > self.save["cpu_usage"] {
+		self.rate["cpu_usage_rate"] = float64(self.info["cpu_usage"]-self.save["cpu_usage"]) / nano_t
 	}
-	second_t := t.Seconds()
-	self.network_rate = map[string]float64{}
-	for key, data := range self.network {
-		if data >= self.last_network[key] {
-			self.network_rate[key+".rate"] = float64(data-self.last_network[key]) / second_t
+	second_t := delta.Seconds()
+	for k, d := range self.info {
+		if !strings.HasPrefix(k, common.VLAN_PREFIX) || d < self.save[k] {
+			continue
 		}
+		self.rate[k+".rate"] = float64(d-self.save[k]) / second_t
 	}
 	self.UpdateTime()
 }
@@ -185,5 +170,5 @@ func (self *MetricData) SetExec() (err error) {
 }
 
 func (self *MetricData) UpdateTime() {
-	self.t = time.Now()
+	self.last = time.Now()
 }

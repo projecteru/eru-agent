@@ -125,7 +125,7 @@ func (self *MetricsRecorder) doSend(ID string, metric *MetricData) {
 		self.hostname, ID[:12], metric.app.Ident,
 	)
 	name := fmt.Sprintf("%s-%s", metric.app.Name, metric.app.EntryPoint)
-	now := metric.t.Unix()
+	now := metric.last.Unix()
 	for offset := 0; offset < self.transfers.Len(); offset++ {
 		addr, err := self.transfers.Get(ID, offset)
 		client := self.clients[addr]
@@ -133,16 +133,12 @@ func (self *MetricsRecorder) doSend(ID string, metric *MetricData) {
 			logs.Info("Get transfer failed", err, ID, metric.app.Name)
 			break
 		}
-		m := []*model.MetricValue{
-			self.newMetricValue(name, "cpu_usage_rate", metric.cpu_usage_rate, tag, now),
-			self.newMetricValue(name, "cpu_system_rate", metric.cpu_system_rate, tag, now),
-			self.newMetricValue(name, "cpu_user_rate", metric.cpu_user_rate, tag, now),
-			self.newMetricValue(name, "mem_usage", metric.mem_usage, tag, now),
-			self.newMetricValue(name, "mem_max_usage", metric.mem_max_usage, tag, now),
-			self.newMetricValue(name, "mem_rss", metric.mem_rss, tag, now),
+		m := []*model.MetricValue{}
+		for k, d := range metric.info {
+			m = append(m, self.newMetricValue(name, k, d, tag, now))
 		}
-		for key, data := range metric.network_rate {
-			m = append(m, self.newMetricValue(name, key, data, tag, now))
+		for k, d := range metric.rate {
+			m = append(m, self.newMetricValue(name, k, d, tag, now))
 		}
 		var resp model.TransferResponse
 		if err := client.Call("Transfer.Update", m, &resp); err != nil {
