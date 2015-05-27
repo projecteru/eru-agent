@@ -107,8 +107,11 @@ func (self *MetricsRecorder) Send() {
 	if apps <= 0 {
 		return
 	}
+	wg := &sync.WaitGroup{}
+	wg.Add(apps)
 	for ID, metric := range self.apps {
 		go func(ID string, metric *MetricData) {
+			defer wg.Done()
 			if !metric.UpdateStats() {
 				logs.Info("Update Stats Failed", ID)
 				return
@@ -118,6 +121,7 @@ func (self *MetricsRecorder) Send() {
 			metric.SaveLast()
 		}(ID, metric)
 	}
+	wg.Wait()
 }
 
 func (self *MetricsRecorder) doSend(ID string, metric *MetricData) {
