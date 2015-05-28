@@ -1,15 +1,11 @@
 package metrics
 
 import (
-	"fmt"
-	"strings"
 	"sync"
 	"time"
 
 	"github.com/CMGS/consistent"
 	"github.com/docker/libcontainer"
-	"github.com/open-falcon/agent/g"
-	"github.com/open-falcon/common/model"
 
 	"../defines"
 	"../logs"
@@ -17,13 +13,13 @@ import (
 
 type MetricsRecorder struct {
 	sync.RWMutex
-	apps      map[string]*MetricData
-	stop      chan bool
-	step      int64
-	hostname  string
-	transfers *consistent.Consistent
-	clients   map[string]g.SingleConnRpcClient
-	factory   libcontainer.Factory
+	apps       map[string]*MetricData
+	stop       chan bool
+	step       int64
+	hostname   string
+	rpcTimeout time.Duration
+	transfers  *consistent.Consistent
+	factory    libcontainer.Factory
 }
 
 func NewMetricsRecorder(hostname string, config defines.MetricsConfig) *MetricsRecorder {
@@ -33,13 +29,9 @@ func NewMetricsRecorder(hostname string, config defines.MetricsConfig) *MetricsR
 	r.stop = make(chan bool)
 	r.transfers = consistent.New()
 	r.hostname = hostname
-	r.clients = map[string]g.SingleConnRpcClient{}
+	r.rpcTimeout = time.Duration(config.Timeout) * time.Millisecond
 	for _, transfer := range config.Transfers {
 		r.transfers.Add(transfer)
-		r.clients[transfer] = g.SingleConnRpcClient{
-			RpcServer: transfer,
-			Timeout:   time.Duration(config.Timeout) * time.Millisecond,
-		}
 	}
 	var err error
 	if r.factory, err = libcontainer.New(config.Root); err != nil {
@@ -60,7 +52,14 @@ func (self *MetricsRecorder) Add(ID string, app *defines.App) {
 		logs.Info("Load Container Failed", err)
 		return
 	}
-	metric := NewMetricData(app, container)
+
+	addr, err := self.transfers.Get(ID, 0)
+	client := SingleConnRpcClient{
+		RpcServer: addr,
+		Timeout:   self.rpcTimeout,
+	}
+
+	metric := NewMetricData(app, container, client, self.step)
 	if err := metric.SetExec(); err != nil {
 		logs.Info("Create Exec Command Failed", err)
 		return
@@ -80,6 +79,7 @@ func (self *MetricsRecorder) Remove(ID string) {
 	if _, ok := self.apps[ID]; !ok {
 		return
 	}
+	self.apps[ID].rpcClient.close()
 	delete(self.apps, ID)
 }
 
@@ -117,56 +117,9 @@ func (self *MetricsRecorder) Send() {
 				return
 			}
 			metric.CalcRate()
-			self.doSend(ID, metric)
+			metric.Send(self.hostname, ID)
 			metric.SaveLast()
 		}(ID, metric)
 	}
 	wg.Wait()
-}
-
-func (self *MetricsRecorder) doSend(ID string, metric *MetricData) {
-	tag := fmt.Sprintf(
-		"hostname=%s,cid=%s,ident=%s",
-		self.hostname, ID[:12], metric.app.Ident,
-	)
-	name := fmt.Sprintf("%s-%s", metric.app.Name, metric.app.EntryPoint)
-	now := metric.last.Unix()
-	for offset := 0; offset < self.transfers.Len(); offset++ {
-		addr, err := self.transfers.Get(ID, offset)
-		client := self.clients[addr]
-		if err != nil {
-			logs.Info("Get transfer failed", err, ID, metric.app.Name)
-			break
-		}
-		m := []*model.MetricValue{}
-		for k, d := range metric.info {
-			if !strings.HasPrefix(k, "mem") {
-				continue
-			}
-			m = append(m, self.newMetricValue(name, k, d, tag, now))
-		}
-		for k, d := range metric.rate {
-			m = append(m, self.newMetricValue(name, k, d, tag, now))
-		}
-		var resp model.TransferResponse
-		if err := client.Call("Transfer.Update", m, &resp); err != nil {
-			logs.Debug("call Transfer.Update fail", err)
-		} else {
-			logs.Debug(name, &resp)
-			break
-		}
-	}
-}
-
-func (self *MetricsRecorder) newMetricValue(endpoint, metric string, value interface{}, tags string, now int64) *model.MetricValue {
-	mv := &model.MetricValue{
-		Endpoint:  endpoint,
-		Metric:    metric,
-		Value:     value,
-		Step:      self.step,
-		Type:      "GAUGE",
-		Tags:      tags,
-		Timestamp: now,
-	}
-	return mv
 }

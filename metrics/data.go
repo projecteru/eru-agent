@@ -13,23 +13,28 @@ import (
 	"github.com/docker/libcontainer"
 	"github.com/docker/libcontainer/cgroups"
 	"github.com/fsouza/go-dockerclient"
+	"github.com/open-falcon/common/model"
 )
 
 type MetricData struct {
 	app       *defines.App
 	last      time.Time
 	exec      *docker.Exec
+	step      int64
 	container libcontainer.Container
+	rpcClient SingleConnRpcClient
 
 	info map[string]uint64
 	save map[string]uint64
 	rate map[string]float64
 }
 
-func NewMetricData(app *defines.App, container libcontainer.Container) *MetricData {
+func NewMetricData(app *defines.App, container libcontainer.Container, client SingleConnRpcClient, step int64) *MetricData {
 	m := &MetricData{}
 	m.app = app
 	m.container = container
+	m.rpcClient = client
+	m.step = step
 	m.info = map[string]uint64{}
 	m.save = map[string]uint64{}
 	m.rate = map[string]float64{}
@@ -171,4 +176,42 @@ func (self *MetricData) SetExec() (err error) {
 
 func (self *MetricData) UpdateTime() {
 	self.last = time.Now()
+}
+
+func (self *MetricData) Send(hostname, ID string) {
+	tag := fmt.Sprintf(
+		"hostname=%s,cid=%s,ident=%s",
+		hostname, ID[:12], self.app.Ident,
+	)
+	name := fmt.Sprintf("%s-%s", self.app.Name, self.app.EntryPoint)
+	now := self.last.Unix()
+	data := []*model.MetricValue{}
+	for k, d := range self.info {
+		if !strings.HasPrefix(k, "mem") {
+			continue
+		}
+		data = append(data, self.newMetricValue(name, k, d, tag, now))
+	}
+	for k, d := range self.rate {
+		data = append(data, self.newMetricValue(name, k, d, tag, now))
+	}
+	var resp model.TransferResponse
+	if err := self.rpcClient.Call("Transfer.Update", data, &resp); err != nil {
+		logs.Debug("call Transfer.Update fail", err)
+	} else {
+		logs.Debug(name, &resp)
+	}
+}
+
+func (self *MetricData) newMetricValue(endpoint, metric string, value interface{}, tags string, now int64) *model.MetricValue {
+	mv := &model.MetricValue{
+		Endpoint:  endpoint,
+		Metric:    metric,
+		Value:     value,
+		Step:      self.step,
+		Type:      "GAUGE",
+		Tags:      tags,
+		Timestamp: now,
+	}
+	return mv
 }
