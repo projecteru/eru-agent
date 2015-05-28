@@ -76,11 +76,11 @@ func (self *MetricsRecorder) Add(ID string, app *defines.App) {
 func (self *MetricsRecorder) Remove(ID string) {
 	self.Lock()
 	defer self.Unlock()
+	delete(self.apps, ID)
 	if _, ok := self.apps[ID]; !ok {
 		return
 	}
 	self.apps[ID].rpcClient.close()
-	delete(self.apps, ID)
 }
 
 func (self *MetricsRecorder) Report() {
@@ -107,19 +107,16 @@ func (self *MetricsRecorder) Send() {
 	if apps <= 0 {
 		return
 	}
-	wg := &sync.WaitGroup{}
-	wg.Add(apps)
 	for ID, metric := range self.apps {
+		if !metric.UpdateStats() {
+			logs.Info("Remove from metric list", ID)
+			self.Remove(ID)
+			return
+		}
 		go func(ID string, metric *MetricData) {
-			defer wg.Done()
-			if !metric.UpdateStats() {
-				logs.Info("Update Stats Failed", ID)
-				return
-			}
 			metric.CalcRate()
 			metric.Send(self.hostname, ID)
 			metric.SaveLast()
 		}(ID, metric)
 	}
-	wg.Wait()
 }
