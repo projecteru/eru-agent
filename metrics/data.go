@@ -112,8 +112,8 @@ func (self *MetricData) UpdateStats() bool {
 	self.info["cpu_user"] = stats.CpuStats.CpuUsage.UsageInUsermode
 	self.info["cpu_system"] = stats.CpuStats.CpuUsage.UsageInKernelmode
 	self.info["cpu_usage"] = stats.CpuStats.CpuUsage.TotalUsage
-	self.info["mem_usage"] = stats.MemoryStats.Usage
-	self.info["mem_max_usage"] = stats.MemoryStats.MaxUsage
+	self.info["mem_usage"] = stats.MemoryStats.Usage.Usage
+	self.info["mem_max_usage"] = stats.MemoryStats.Usage.MaxUsage
 	self.info["mem_rss"] = stats.MemoryStats.Stats["rss"]
 
 	if network, err := GetNetStats(self.exec); err != nil {
