@@ -1,9 +1,7 @@
 package metrics
 
 import (
-	"bufio"
 	"fmt"
-	"io"
 	"strings"
 	"time"
 
@@ -20,7 +18,9 @@ type MetricData struct {
 	app       *defines.App
 	last      time.Time
 	exec      *docker.Exec
-	step      int64
+	step      time.Duration
+	tag       string
+	endpoint  string
 	container libcontainer.Container
 	rpcClient SingleConnRpcClient
 
@@ -29,7 +29,7 @@ type MetricData struct {
 	rate map[string]float64
 }
 
-func NewMetricData(app *defines.App, container libcontainer.Container, client SingleConnRpcClient, step int64) *MetricData {
+func NewMetricData(ID string, app *defines.App, container libcontainer.Container, client SingleConnRpcClient, step time.Duration, hostname string) *MetricData {
 	m := &MetricData{}
 	m.app = app
 	m.container = container
@@ -38,69 +38,33 @@ func NewMetricData(app *defines.App, container libcontainer.Container, client Si
 	m.info = map[string]uint64{}
 	m.save = map[string]uint64{}
 	m.rate = map[string]float64{}
+	m.tag = fmt.Sprintf(
+		"hostname=%s,cid=%s,ident=%s",
+		hostname, ID[:12], app.Ident,
+	)
+	m.endpoint = fmt.Sprintf("%s-%s", app.Name, app.EntryPoint)
 	return m
 }
 
-func GetNetStats(exec *docker.Exec) (result map[string]uint64, err error) {
-	outr, outw := io.Pipe()
-	defer outr.Close()
-
-	success := make(chan struct{})
-	failure := make(chan error)
-	go func() {
-		// TODO: 防止被err流block, 删掉先, 之后记得补上
-		err = common.Docker.StartExec(
-			exec.ID,
-			docker.StartExecOptions{
-				OutputStream: outw,
-				Success:      success,
+func (self *MetricData) setExec() (err error) {
+	cid := self.container.ID()
+	self.exec, err = common.Docker.CreateExec(
+		docker.CreateExecOptions{
+			AttachStdout: true,
+			Cmd: []string{
+				"cat", "/proc/net/dev",
 			},
-		)
-		outw.Close()
-		if err != nil {
-			close(success)
-			failure <- err
-		}
-	}()
-	if _, ok := <-success; ok {
-		success <- struct{}{}
-		result = map[string]uint64{}
-		s := bufio.NewScanner(outr)
-		var d uint64
-		for s.Scan() {
-			var name string
-			var n [8]uint64
-			text := s.Text()
-			if strings.Index(text, ":") < 1 {
-				continue
-			}
-			ts := strings.Split(text, ":")
-			fmt.Sscanf(ts[0], "%s", &name)
-			if !strings.HasPrefix(name, common.VLAN_PREFIX) {
-				continue
-			}
-			fmt.Sscanf(ts[1],
-				"%d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d",
-				&n[0], &n[1], &n[2], &n[3], &d, &d, &d, &d,
-				&n[4], &n[5], &n[6], &n[7], &d, &d, &d, &d,
-			)
-			result[name+".inbytes"] = n[0]
-			result[name+".inpackets"] = n[1]
-			result[name+".inerrs"] = n[2]
-			result[name+".indrop"] = n[3]
-			result[name+".outbytes"] = n[4]
-			result[name+".outpackets"] = n[5]
-			result[name+".outerrs"] = n[6]
-			result[name+".outdrop"] = n[7]
-		}
-		logs.Debug("Container net status", result)
+			Container: cid,
+		},
+	)
+	if err != nil {
 		return
 	}
-	err = <-failure
-	return nil, err
+	logs.Debug("Create exec id", self.exec.ID)
+	return
 }
 
-func (self *MetricData) UpdateStats() bool {
+func (self *MetricData) updateStats() bool {
 	var stats *cgroups.Stats
 	if s, err := self.container.Stats(); err != nil {
 		logs.Info("Get Stats Failed", err)
@@ -127,15 +91,15 @@ func (self *MetricData) UpdateStats() bool {
 	return true
 }
 
-func (self *MetricData) SaveLast() {
+func (self *MetricData) saveLast() {
 	for k, d := range self.info {
 		self.save[k] = d
+		delete(self.info, k)
 	}
-	self.info = map[string]uint64{}
 }
 
-func (self *MetricData) CalcRate() {
-	delta := time.Now().Sub(self.last)
+func (self *MetricData) calcRate(now time.Time) {
+	delta := now.Sub(self.last)
 	nano_t := float64(delta.Nanoseconds())
 	if self.info["cpu_user"] > self.save["cpu_user"] {
 		self.rate["cpu_user_rate"] = float64(self.info["cpu_user"]-self.save["cpu_user"]) / nano_t
@@ -153,70 +117,66 @@ func (self *MetricData) CalcRate() {
 		}
 		self.rate[k+".rate"] = float64(d-self.save[k]) / second_t
 	}
-	self.UpdateTime()
 }
 
-func (self *MetricData) SetExec() (err error) {
-	cid := self.container.ID()
-	self.exec, err = common.Docker.CreateExec(
-		docker.CreateExecOptions{
-			AttachStdout: true,
-			Cmd: []string{
-				"cat", "/proc/net/dev",
-			},
-			Container: cid,
-		},
-	)
-	if err != nil {
-		return
-	}
-	logs.Debug("Create exec id", self.exec.ID)
-	return
-}
-
-func (self *MetricData) UpdateTime() {
-	self.last = time.Now()
-}
-
-func (self *MetricData) Send(hostname, ID string) {
-	tag := fmt.Sprintf(
-		"hostname=%s,cid=%s,ident=%s",
-		hostname, ID[:12], self.app.Ident,
-	)
-	name := fmt.Sprintf("%s-%s", self.app.Name, self.app.EntryPoint)
-	now := self.last.Unix()
+func (self *MetricData) send() {
 	data := []*model.MetricValue{}
 	for k, d := range self.info {
 		if !strings.HasPrefix(k, "mem") {
 			continue
 		}
-		data = append(data, self.newMetricValue(name, k, d, tag, now))
+		data = append(data, self.newMetricValue(k, d))
 	}
 	for k, d := range self.rate {
-		data = append(data, self.newMetricValue(name, k, d, tag, now))
+		data = append(data, self.newMetricValue(k, d))
 	}
 	var resp model.TransferResponse
 	if err := self.rpcClient.Call("Transfer.Update", data, &resp); err != nil {
 		logs.Debug("call Transfer.Update fail", err)
 	} else {
-		logs.Debug(name, data)
-		logs.Debug(name, self.last, &resp)
+		logs.Debug(self.endpoint, self.last, &resp)
 	}
 }
 
-func (self *MetricData) newMetricValue(endpoint, metric string, value interface{}, tags string, now int64) *model.MetricValue {
+func (self *MetricData) newMetricValue(metric string, value interface{}) *model.MetricValue {
 	mv := &model.MetricValue{
-		Endpoint:  endpoint,
+		Endpoint:  self.endpoint,
 		Metric:    metric,
 		Value:     value,
-		Step:      self.step,
+		Step:      int64(self.step.Seconds()),
 		Type:      "GAUGE",
-		Tags:      tags,
-		Timestamp: now,
+		Tags:      self.tag,
+		Timestamp: self.last.Unix(),
 	}
 	return mv
 }
 
-func (self *MetricData) Close() {
+func (self *MetricData) Report() {
+	defer self.close()
+	defer logs.Info(self.app.Name, "Metrics report stop")
+	logs.Info(self.app.Name, "Metrics report start")
+
+	self.last = time.Now()
+	self.setExec()
+	if !self.updateStats() {
+		return
+	}
+	self.saveLast()
+	for {
+		select {
+		case now := <-time.After(self.step):
+			if !self.updateStats() {
+				// get stats failed will close report
+				return
+			}
+			self.calcRate(now)
+			self.last = now
+			self.send()
+			self.saveLast()
+		}
+	}
+}
+
+func (self *MetricData) close() {
 	self.rpcClient.close()
 }

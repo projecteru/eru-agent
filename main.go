@@ -55,7 +55,6 @@ func main() {
 	Status.Load()
 	go Status.Watcher()
 	go Status.Listen()
-	go Metrics.Report()
 	go Ping()
 
 	var c = make(chan os.Signal, 1)
@@ -65,5 +64,4 @@ func main() {
 	signal.Notify(c, syscall.SIGKILL)
 	signal.Notify(c, syscall.SIGQUIT)
 	logs.Info("Catch", <-c)
-	Metrics.Stop()
 }
