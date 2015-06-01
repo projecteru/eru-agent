@@ -14,8 +14,7 @@ import (
 type MetricsRecorder struct {
 	sync.RWMutex
 	apps       map[string]*MetricData
-	stop       chan bool
-	step       int64
+	step       time.Duration
 	hostname   string
 	rpcTimeout time.Duration
 	transfers  *consistent.Consistent
@@ -24,11 +23,10 @@ type MetricsRecorder struct {
 
 func NewMetricsRecorder(hostname string, config defines.MetricsConfig) *MetricsRecorder {
 	r := &MetricsRecorder{}
-	r.apps = map[string]*MetricData{}
-	r.step = config.Step
-	r.stop = make(chan bool)
-	r.transfers = consistent.New()
 	r.hostname = hostname
+	r.apps = map[string]*MetricData{}
+	r.transfers = consistent.New()
+	r.step = time.Duration(config.Step) * time.Second
 	r.rpcTimeout = time.Duration(config.Timeout) * time.Millisecond
 	for _, transfer := range config.Transfers {
 		r.transfers.Add(transfer)
@@ -59,64 +57,16 @@ func (self *MetricsRecorder) Add(ID string, app *defines.App) {
 		Timeout:   self.rpcTimeout,
 	}
 
-	metric := NewMetricData(app, container, client, self.step)
-	if err := metric.SetExec(); err != nil {
-		logs.Info("Create Exec Command Failed", err)
-		return
-	}
-	metric.UpdateTime()
-	if !metric.UpdateStats() {
-		logs.Info("Update Stats Failed", ID)
-		return
-	}
-	metric.SaveLast()
+	metric := NewMetricData(ID, app, container, client, self.step, self.hostname)
 	self.apps[ID] = metric
+	go metric.Report()
 }
 
 func (self *MetricsRecorder) Remove(ID string) {
 	self.Lock()
 	defer self.Unlock()
 	defer delete(self.apps, ID)
-	defer self.apps[ID].Close()
 	if _, ok := self.apps[ID]; !ok {
 		return
-	}
-}
-
-func (self *MetricsRecorder) Report() {
-	defer close(self.stop)
-	for {
-		select {
-		case <-time.After(time.Second * time.Duration(self.step)):
-			self.Send()
-		case <-self.stop:
-			logs.Info("Metrics Stop")
-			return
-		}
-	}
-}
-
-func (self *MetricsRecorder) Stop() {
-	self.stop <- true
-}
-
-func (self *MetricsRecorder) Send() {
-	self.RLock()
-	defer self.RUnlock()
-	apps := len(self.apps)
-	if apps <= 0 {
-		return
-	}
-	for ID, metric := range self.apps {
-		go func(ID string, metric *MetricData) {
-			if !metric.UpdateStats() {
-				logs.Info("Remove from metric list", ID)
-				self.Remove(ID)
-				return
-			}
-			metric.CalcRate()
-			metric.Send(self.hostname, ID)
-			metric.SaveLast()
-		}(ID, metric)
 	}
 }
