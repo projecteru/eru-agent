@@ -199,7 +199,8 @@ func (self *MetricData) Send(hostname, ID string) {
 	if err := self.rpcClient.Call("Transfer.Update", data, &resp); err != nil {
 		logs.Debug("call Transfer.Update fail", err)
 	} else {
-		logs.Debug(name, &resp)
+		logs.Debug(name, data)
+		logs.Debug(name, self.last, &resp)
 	}
 }
 

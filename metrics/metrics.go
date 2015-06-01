@@ -108,12 +108,12 @@ func (self *MetricsRecorder) Send() {
 		return
 	}
 	for ID, metric := range self.apps {
-		if !metric.UpdateStats() {
-			logs.Info("Remove from metric list", ID)
-			self.Remove(ID)
-			continue
-		}
 		go func(ID string, metric *MetricData) {
+			if !metric.UpdateStats() {
+				logs.Info("Remove from metric list", ID)
+				self.Remove(ID)
+				return
+			}
 			metric.CalcRate()
 			metric.Send(self.hostname, ID)
 			metric.SaveLast()
