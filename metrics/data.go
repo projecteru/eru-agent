@@ -215,3 +215,7 @@ func (self *MetricData) newMetricValue(endpoint, metric string, value interface{
 	}
 	return mv
 }
+
+func (self *MetricData) Close() {
+	self.rpcClient.close()
+}
