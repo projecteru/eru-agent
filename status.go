@@ -8,6 +8,7 @@ import (
 	"./common"
 	"./defines"
 	"./logs"
+	"./metrics"
 	"./utils"
 	"github.com/fsouza/go-dockerclient"
 	"github.com/keimoon/gore"
@@ -34,7 +35,7 @@ func (self *StatusMoniter) Listen() {
 		case common.STATUS_DIE:
 			// Check if exists
 			if _, ok := self.Apps[event.ID]; ok {
-				go Metrics.Remove(event.ID)
+				go metrics.Metrics.Remove(event.ID)
 				delete(self.Apps, event.ID)
 				reportContainerDeath(event.ID)
 			}
@@ -152,7 +153,7 @@ func (self *StatusMoniter) Add(ID, containerName string) {
 	logs.Debug("Container", name, entrypoint, ident)
 	app := &defines.App{name, entrypoint, ident}
 	self.Apps[ID] = app
-	go Metrics.Add(ID, app)
+	go metrics.Metrics.Add(ID, app)
 	Lenz.Attacher.Attach(ID, app)
 	reportContainerCure(ID)
 }

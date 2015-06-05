@@ -13,7 +13,7 @@ import (
 
 type MetricsRecorder struct {
 	sync.RWMutex
-	apps       map[string]*MetricData
+	apps       map[string]struct{}
 	step       time.Duration
 	hostname   string
 	rpcTimeout time.Duration
@@ -24,7 +24,7 @@ type MetricsRecorder struct {
 func NewMetricsRecorder(hostname string, config defines.MetricsConfig) *MetricsRecorder {
 	r := &MetricsRecorder{}
 	r.hostname = hostname
-	r.apps = map[string]*MetricData{}
+	r.apps = map[string]struct{}{}
 	r.transfers = consistent.New()
 	r.step = time.Duration(config.Step) * time.Second
 	r.rpcTimeout = time.Duration(config.Timeout) * time.Millisecond
@@ -57,9 +57,9 @@ func (self *MetricsRecorder) Add(ID string, app *defines.App) {
 		Timeout:   self.rpcTimeout,
 	}
 
-	metric := NewMetricData(ID, app, container, client, self.step, self.hostname)
-	self.apps[ID] = metric
+	metric := NewMetricData(app, container, client, self.step, self.hostname)
 	go metric.Report()
+	self.apps[ID] = struct{}{}
 }
 
 func (self *MetricsRecorder) Remove(ID string) {
@@ -70,3 +70,12 @@ func (self *MetricsRecorder) Remove(ID string) {
 		return
 	}
 }
+
+func (self *MetricsRecorder) Vaild(ID string) bool {
+	self.RLock()
+	defer self.RUnlock()
+	_, ok := self.apps[ID]
+	return ok
+}
+
+var Metrics *MetricsRecorder

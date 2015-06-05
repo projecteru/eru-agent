@@ -17,7 +17,7 @@ func InitTest() {
 	if Lenz == nil {
 		Lenz = lenz.NewLenz(config.Lenz)
 	}
-	if Metrics == nil {
-		Metrics = metrics.NewMetricsRecorder(config.HostName, config.Metrics)
+	if metrics.Metrics == nil {
+		metrics.Metrics = metrics.NewMetricsRecorder(config.HostName, config.Metrics)
 	}
 }
