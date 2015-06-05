@@ -29,7 +29,7 @@ type MetricData struct {
 	rate map[string]float64
 }
 
-func NewMetricData(ID string, app *defines.App, container libcontainer.Container, client SingleConnRpcClient, step time.Duration, hostname string) *MetricData {
+func NewMetricData(app *defines.App, container libcontainer.Container, client SingleConnRpcClient, step time.Duration, hostname string) *MetricData {
 	m := &MetricData{}
 	m.app = app
 	m.container = container
@@ -40,7 +40,7 @@ func NewMetricData(ID string, app *defines.App, container libcontainer.Container
 	m.rate = map[string]float64{}
 	m.tag = fmt.Sprintf(
 		"hostname=%s,cid=%s,ident=%s",
-		hostname, ID[:12], app.Ident,
+		hostname, container.ID()[:12], app.Ident,
 	)
 	m.endpoint = fmt.Sprintf("%s-%s", app.Name, app.EntryPoint)
 	return m
@@ -165,9 +165,12 @@ func (self *MetricData) Report() {
 	for {
 		select {
 		case now := <-time.After(self.step):
-			if !self.updateStats() {
-				// get stats failed will close report
+			if !Metrics.Vaild(self.container.ID()) {
 				return
+			}
+			if !self.updateStats() {
+				// veth missing problem
+				continue
 			}
 			self.calcRate(now)
 			self.last = now

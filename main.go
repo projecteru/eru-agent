@@ -17,7 +17,6 @@ import (
 )
 
 var Lenz *lenz.LenzForwarder
-var Metrics *metrics.MetricsRecorder
 
 var Status *StatusMoniter
 var VLan *VLanSetter
@@ -44,7 +43,7 @@ func main() {
 	)
 
 	Lenz = lenz.NewLenz(config.Lenz)
-	Metrics = metrics.NewMetricsRecorder(config.HostName, config.Metrics)
+	metrics.Metrics = metrics.NewMetricsRecorder(config.HostName, config.Metrics)
 
 	utils.WritePid(config.PidFile)
 	defer os.Remove(config.PidFile)
