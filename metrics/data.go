@@ -153,7 +153,6 @@ func (self *MetricData) newMetricValue(metric string, value interface{}) *model.
 
 func (self *MetricData) Report() {
 	defer self.close()
-	defer logs.Info(self.app.Name, "Metrics report stop")
 	logs.Info(self.app.Name, "Metrics report start")
 
 	self.last = time.Now()
@@ -178,6 +177,7 @@ func (self *MetricData) Report() {
 			self.saveLast()
 		}
 	}
+	logs.Info(self.app.Name, self.app.EntryPoint, "Metrics report stop")
 }
 
 func (self *MetricData) close() {
