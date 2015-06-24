@@ -17,7 +17,6 @@ lenz:
   stdout: False
 
 metrics:
-  root: /run/docker/execdriver/native
   step: 30
   timeout: 1000
   transfers:

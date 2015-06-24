@@ -8,8 +8,6 @@ import (
 	"../common"
 	"../defines"
 	"../logs"
-	"github.com/docker/libcontainer"
-	"github.com/docker/libcontainer/cgroups"
 	"github.com/fsouza/go-dockerclient"
 	"github.com/open-falcon/common/model"
 )
@@ -21,7 +19,6 @@ type MetricData struct {
 	step      time.Duration
 	tag       string
 	endpoint  string
-	container libcontainer.Container
 	rpcClient SingleConnRpcClient
 
 	info map[string]uint64
@@ -29,10 +26,9 @@ type MetricData struct {
 	rate map[string]float64
 }
 
-func NewMetricData(app *defines.App, container libcontainer.Container, client SingleConnRpcClient, step time.Duration, hostname string) *MetricData {
+func NewMetricData(app *defines.App, client SingleConnRpcClient, step time.Duration, hostname string) *MetricData {
 	m := &MetricData{}
 	m.app = app
-	m.container = container
 	m.rpcClient = client
 	m.step = step
 	m.info = map[string]uint64{}
@@ -40,14 +36,14 @@ func NewMetricData(app *defines.App, container libcontainer.Container, client Si
 	m.rate = map[string]float64{}
 	m.tag = fmt.Sprintf(
 		"hostname=%s,cid=%s,ident=%s",
-		hostname, container.ID()[:12], app.Ident,
+		hostname, app.ID[:12], app.Ident,
 	)
 	m.endpoint = fmt.Sprintf("%s-%s", app.Name, app.EntryPoint)
 	return m
 }
 
 func (self *MetricData) setExec() (err error) {
-	cid := self.container.ID()
+	cid := self.app.ID
 	self.exec, err = common.Docker.CreateExec(
 		docker.CreateExecOptions{
 			AttachStdout: true,
@@ -65,20 +61,24 @@ func (self *MetricData) setExec() (err error) {
 }
 
 func (self *MetricData) updateStats() bool {
-	var stats *cgroups.Stats
-	if s, err := self.container.Stats(); err != nil {
-		logs.Info("Get Stats Failed", err)
+	statsChan := make(chan *docker.Stats)
+	opt := docker.StatsOptions{self.app.ID, statsChan, false}
+	go func() {
+		if err := common.Docker.Stats(opt); err != nil {
+			logs.Info("Get Stats Failed", err)
+		}
+	}()
+	stats := <-statsChan
+	if stats == nil {
 		return false
-	} else {
-		stats = s.CgroupStats
 	}
 
-	self.info["cpu_user"] = stats.CpuStats.CpuUsage.UsageInUsermode
-	self.info["cpu_system"] = stats.CpuStats.CpuUsage.UsageInKernelmode
-	self.info["cpu_usage"] = stats.CpuStats.CpuUsage.TotalUsage
-	self.info["mem_usage"] = stats.MemoryStats.Usage.Usage
-	self.info["mem_max_usage"] = stats.MemoryStats.Usage.MaxUsage
-	self.info["mem_rss"] = stats.MemoryStats.Stats["rss"]
+	self.info["cpu_user"] = stats.CPUStats.CPUUsage.UsageInUsermode
+	self.info["cpu_system"] = stats.CPUStats.CPUUsage.UsageInKernelmode
+	self.info["cpu_usage"] = stats.CPUStats.CPUUsage.TotalUsage
+	self.info["mem_usage"] = stats.MemoryStats.Usage
+	self.info["mem_max_usage"] = stats.MemoryStats.MaxUsage
+	self.info["mem_rss"] = stats.MemoryStats.Stats.Rss
 
 	if network, err := GetNetStats(self.exec); err != nil {
 		logs.Info(err)
@@ -164,7 +164,7 @@ func (self *MetricData) Report() {
 	for {
 		select {
 		case now := <-time.After(self.step):
-			if !Metrics.Vaild(self.container.ID()) {
+			if !Metrics.Vaild(self.app.ID) {
 				return
 			}
 			if !self.updateStats() {
