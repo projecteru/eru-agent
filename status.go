@@ -151,7 +151,7 @@ func (self *StatusMoniter) Add(ID, containerName string) {
 		return
 	}
 	logs.Debug("Container", name, entrypoint, ident)
-	app := &defines.App{name, entrypoint, ident}
+	app := &defines.App{ID, name, entrypoint, ident}
 	self.Apps[ID] = app
 	go metrics.Metrics.Add(ID, app)
 	Lenz.Attacher.Attach(ID, app)

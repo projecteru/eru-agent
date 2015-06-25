@@ -19,7 +19,6 @@ type LenzConfig struct {
 }
 
 type MetricsConfig struct {
-	Root      string
 	Step      int64
 	Timeout   int64
 	Transfers []string
