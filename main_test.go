@@ -1,15 +1,15 @@
 package main
 
 import (
-	"./common"
-	"./defines"
-	"./lenz"
-	"./metrics"
+	"github.com/HunanTV/eru-agent/common"
+	"github.com/HunanTV/eru-agent/defines"
+	"github.com/HunanTV/eru-agent/lenz"
+	"github.com/HunanTV/eru-agent/metrics"
 )
 
 func InitTest() {
 	load("agent.yaml")
-	common.Docker = defines.NewDocker(config.Docker.Endpoint)
+	common.Docker, _ = defines.NewDocker(config.Docker.Endpoint)
 	defines.MockDocker(common.Docker)
 	if Status == nil {
 		Status = NewStatus()

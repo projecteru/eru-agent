@@ -6,8 +6,8 @@ import (
 	"strings"
 	"sync"
 
-	"../defines"
-	"../logs"
+	"github.com/HunanTV/eru-agent/defines"
+	"github.com/HunanTV/eru-agent/logs"
 	"github.com/fsouza/go-dockerclient"
 )
 

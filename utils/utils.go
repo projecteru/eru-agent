@@ -9,8 +9,8 @@ import (
 	"strconv"
 	"strings"
 
-	"../common"
-	"../logs"
+	"github.com/HunanTV/eru-agent/common"
+	"github.com/HunanTV/eru-agent/logs"
 )
 
 func UrlJoin(strs ...string) string {

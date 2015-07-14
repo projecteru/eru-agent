@@ -5,11 +5,11 @@ import (
 	"net/http"
 	"strings"
 
-	"./common"
-	"./defines"
-	"./logs"
-	"./metrics"
-	"./utils"
+	"github.com/HunanTV/eru-agent/common"
+	"github.com/HunanTV/eru-agent/defines"
+	"github.com/HunanTV/eru-agent/logs"
+	"github.com/HunanTV/eru-agent/metrics"
+	"github.com/HunanTV/eru-agent/utils"
 	"github.com/fsouza/go-dockerclient"
 	"github.com/keimoon/gore"
 )

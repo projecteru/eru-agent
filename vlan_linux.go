@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"strings"
 
-	"./common"
-	"./logs"
+	"github.com/HunanTV/eru-agent/common"
+	"github.com/HunanTV/eru-agent/logs"
 
 	"github.com/docker/libcontainer/netlink"
 	"github.com/keimoon/gore"

@@ -8,12 +8,12 @@ import (
 
 	"github.com/keimoon/gore"
 
-	"./common"
-	"./defines"
-	"./lenz"
-	"./logs"
-	"./metrics"
-	"./utils"
+	"github.com/HunanTV/eru-agent/common"
+	"github.com/HunanTV/eru-agent/defines"
+	"github.com/HunanTV/eru-agent/lenz"
+	"github.com/HunanTV/eru-agent/logs"
+	"github.com/HunanTV/eru-agent/metrics"
+	"github.com/HunanTV/eru-agent/utils"
 )
 
 var Lenz *lenz.LenzForwarder
@@ -22,6 +22,7 @@ var Status *StatusMoniter
 var VLan *VLanSetter
 
 func main() {
+	var err error
 	LoadConfig()
 
 	common.Rds = &gore.Pool{
@@ -35,12 +36,14 @@ func main() {
 	}
 	defer common.Rds.Close()
 
-	common.Docker = defines.NewDocker(
+	if common.Docker, err = defines.NewDocker(
 		config.Docker.Endpoint,
 		config.Docker.Cert,
 		config.Docker.Key,
 		config.Docker.Ca,
-	)
+	); err != nil {
+		logs.Assert(err, "Docker")
+	}
 
 	Lenz = lenz.NewLenz(config.Lenz)
 	metrics.Metrics = metrics.NewMetricsRecorder(config.HostName, config.Metrics)

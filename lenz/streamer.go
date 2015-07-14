@@ -9,8 +9,8 @@ import (
 	"net"
 	"net/url"
 
-	"../defines"
-	"../logs"
+	"github.com/HunanTV/eru-agent/defines"
+	"github.com/HunanTV/eru-agent/logs"
 )
 
 func Streamer(route *defines.Route, logstream chan *defines.Log, stdout bool) {

@@ -6,7 +6,7 @@ import (
 
 	"github.com/CMGS/consistent"
 
-	"../defines"
+	"github.com/HunanTV/eru-agent/defines"
 )
 
 type MetricsRecorder struct {

@@ -15,7 +15,7 @@ func init() {
 }
 
 func Test_MockDocker(t *testing.T) {
-	Docker := NewDocker(config.Docker.Endpoint)
+	Docker, _ := NewDocker(config.Docker.Endpoint)
 	MockDocker(Docker)
 	err := Docker.PushImage(docker.PushImageOptions{}, docker.AuthConfiguration{})
 	if err != nil {

@@ -3,8 +3,8 @@ package main
 import (
 	"testing"
 
-	"./common"
-	"./defines"
+	"github.com/HunanTV/eru-agent/common"
+	"github.com/HunanTV/eru-agent/defines"
 	"github.com/fsouza/go-dockerclient"
 )
 

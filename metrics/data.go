@@ -5,9 +5,9 @@ import (
 	"strings"
 	"time"
 
-	"../common"
-	"../defines"
-	"../logs"
+	"github.com/HunanTV/eru-agent/common"
+	"github.com/HunanTV/eru-agent/defines"
+	"github.com/HunanTV/eru-agent/logs"
 	"github.com/fsouza/go-dockerclient"
 	"github.com/open-falcon/common/model"
 )

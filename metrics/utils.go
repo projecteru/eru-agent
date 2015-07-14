@@ -6,8 +6,8 @@ import (
 	"io"
 	"strings"
 
-	"../common"
-	"../logs"
+	"github.com/HunanTV/eru-agent/common"
+	"github.com/HunanTV/eru-agent/logs"
 
 	"github.com/fsouza/go-dockerclient"
 )

@@ -1,7 +1,7 @@
 package common
 
 import (
-	"../defines"
+	"github.com/HunanTV/eru-agent/defines"
 	"github.com/keimoon/gore"
 )
 

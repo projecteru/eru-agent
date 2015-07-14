@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"../logs"
+	"github.com/HunanTV/eru-agent/logs"
 
 	"github.com/toolkits/net"
 )

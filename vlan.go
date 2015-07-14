@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"strings"
 
-	"./common"
-	"./logs"
 	"github.com/CMGS/consistent"
+	"github.com/HunanTV/eru-agent/common"
+	"github.com/HunanTV/eru-agent/logs"
 	"github.com/docker/libcontainer/netlink"
 	"github.com/keimoon/gore"
 )

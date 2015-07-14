@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"time"
 
-	"./common"
-	"./logs"
+	"github.com/HunanTV/eru-agent/common"
+	"github.com/HunanTV/eru-agent/logs"
 )
 
 func Ping() {

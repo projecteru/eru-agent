@@ -3,9 +3,9 @@ package lenz
 import (
 	"os"
 
-	"../common"
-	"../defines"
-	"../logs"
+	"github.com/HunanTV/eru-agent/common"
+	"github.com/HunanTV/eru-agent/defines"
+	"github.com/HunanTV/eru-agent/logs"
 )
 
 type LenzForwarder struct {

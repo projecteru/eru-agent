@@ -6,9 +6,9 @@ import (
 	"strings"
 	"sync"
 
-	"../defines"
-	"../logs"
-	"../utils"
+	"github.com/HunanTV/eru-agent/defines"
+	"github.com/HunanTV/eru-agent/logs"
+	"github.com/HunanTV/eru-agent/utils"
 )
 
 type RouteStore interface {
