@@ -35,6 +35,11 @@ type VLanConfig struct {
 	Physical []string
 }
 
+type APIConfig struct {
+	Http bool
+	Addr string
+}
+
 type AgentConfig struct {
 	HostName string `yaml:"hostname"`
 	PidFile  string
@@ -45,4 +50,5 @@ type AgentConfig struct {
 	Metrics MetricsConfig
 	VLan    VLanConfig
 	Redis   RedisConfig
+	API     APIConfig
 }

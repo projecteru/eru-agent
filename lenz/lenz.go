@@ -8,6 +8,8 @@ import (
 	"github.com/HunanTV/eru-agent/logs"
 )
 
+var Lenz *LenzForwarder
+
 type LenzForwarder struct {
 	Attacher *AttachManager
 	Router   *RouteManager
