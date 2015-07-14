@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 
+	"./common"
 	"./defines"
 	"./logs"
 	"gopkg.in/yaml.v2"
@@ -14,9 +15,15 @@ var config = defines.AgentConfig{}
 
 func LoadConfig() {
 	var configPath string
+	var version bool
 	flag.BoolVar(&logs.Mode, "DEBUG", false, "enable debug")
 	flag.StringVar(&configPath, "c", "agent.yaml", "config file")
+	flag.BoolVar(&version, "v", false, "show version")
 	flag.Parse()
+	if version {
+		logs.Info("Version", common.VERSION)
+		os.Exit(0)
+	}
 	load(configPath)
 }
 
