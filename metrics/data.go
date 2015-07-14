@@ -136,6 +136,7 @@ func (self *MetricData) send() {
 	} else {
 		logs.Debug(self.endpoint, self.last, &resp)
 	}
+	logs.Info(self.endpoint, self.last, resp.Total)
 }
 
 func (self *MetricData) newMetricValue(metric string, value interface{}) *model.MetricValue {
