@@ -30,7 +30,7 @@ func (self *VLanSetter) addVLan(feedKey, content, ident, containerID string) {
 	seq, ips := parser[0], parser[1]
 
 	device, _ := self.Devices.Get(ident, 0)
-	vethName := fmt.Sprintf("%s%s.%s", common.VLAN_PREFIX, ident, seq)
+	vethName := fmt.Sprintf("%s%s", common.VLAN_PREFIX, seq)
 	logs.Info("Add new VLan to", vethName, containerID)
 
 	if err := netlink.NetworkLinkAddMacVlan(device, vethName, "bridge"); err != nil {
