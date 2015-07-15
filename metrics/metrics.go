@@ -7,6 +7,7 @@ import (
 	"github.com/CMGS/consistent"
 	"github.com/HunanTV/eru-agent/defines"
 	"github.com/HunanTV/eru-agent/g"
+	"github.com/HunanTV/eru-agent/logs"
 )
 
 var lock sync.RWMutex
@@ -25,6 +26,7 @@ func InitMetrics() {
 	}
 
 	Apps = map[string]struct{}{}
+	logs.Info("Metrics initiated")
 }
 
 func Add(app *defines.App) {

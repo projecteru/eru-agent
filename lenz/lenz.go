@@ -17,14 +17,15 @@ func InitLenz() {
 	Router = NewRouteManager(Attacher, g.Config.Lenz.Stdout)
 	Routefs = RouteFileStore(g.Config.Lenz.Routes)
 	if len(g.Config.Lenz.Forwards) > 0 {
-		logs.Info("Routing all to", g.Config.Lenz.Forwards)
+		logs.Debug("Lenz Routing all to", g.Config.Lenz.Forwards)
 		target := defines.Target{Addrs: g.Config.Lenz.Forwards}
 		route := defines.Route{ID: "lenz_default", Target: &target}
 		route.LoadBackends()
 		Router.Add(&route)
 	}
 	if _, err := os.Stat(g.Config.Lenz.Routes); err == nil {
-		logs.Info("Loading and persisting routes in", g.Config.Lenz.Routes)
+		logs.Debug("Loading and persisting routes in", g.Config.Lenz.Routes)
 		logs.Assert(Router.Load(Routefs), "persistor")
 	}
+	logs.Info("Lenz initiated")
 }

@@ -11,11 +11,10 @@ import (
 	"github.com/HunanTV/eru-agent/lenz"
 	"github.com/HunanTV/eru-agent/logs"
 	"github.com/HunanTV/eru-agent/metrics"
+	"github.com/HunanTV/eru-agent/network"
 	"github.com/HunanTV/eru-agent/status"
 	"github.com/HunanTV/eru-agent/utils"
 )
-
-var VLan *VLanSetter
 
 func main() {
 	g.LoadConfig()
@@ -25,21 +24,15 @@ func main() {
 	lenz.InitLenz()
 	status.InitStatus()
 	metrics.InitMetrics()
+	network.InitVlan()
 
 	utils.WritePid(g.Config.PidFile)
 	defer os.Remove(g.Config.PidFile)
 
-	//VLan = NewVLanSetter(
-	//go VLan.Watcher()
-	// Watch Lan first
+	api.Serve()
 	status.Load()
 	status.StartMonitor()
 	health.Check()
-	//go status.Status.Watcher()
-
-	if g.Config.API.Http {
-		go api.HTTPServe()
-	}
 
 	var c = make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
@@ -47,5 +40,5 @@ func main() {
 	signal.Notify(c, syscall.SIGHUP)
 	signal.Notify(c, syscall.SIGKILL)
 	signal.Notify(c, syscall.SIGQUIT)
-	logs.Info("Catch", <-c)
+	logs.Info("Eru Agent Catch", <-c)
 }

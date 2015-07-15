@@ -36,8 +36,9 @@ type VLanConfig struct {
 }
 
 type APIConfig struct {
-	Http bool
-	Addr string
+	Http   bool
+	PubSub bool
+	Addr   string
 }
 
 type AgentConfig struct {

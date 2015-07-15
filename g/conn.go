@@ -31,8 +31,10 @@ func InitialConn() {
 	); err != nil {
 		logs.Assert(err, "Docker")
 	}
+	logs.Info("Global connections initiated")
 }
 
 func CloseConn() {
 	Rds.Close()
+	logs.Info("Global connections closed")
 }

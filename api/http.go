@@ -35,7 +35,7 @@ func HTTPServe() {
 	m.Add("PUT", "/api/add", http.HandlerFunc(JSONWrapper(addContainer)))
 
 	http.Handle("/", m)
-	logs.Info("Start HTTP API server at", g.Config.API.Addr)
+	logs.Info("API http server start at", g.Config.API.Addr)
 	err := http.ListenAndServe(g.Config.API.Addr, nil)
 	if err != nil {
 		logs.Info(err, "ListenAndServe: ")

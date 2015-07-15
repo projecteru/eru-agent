@@ -1,7 +1,8 @@
-package main
+package network
 
 import "github.com/HunanTV/eru-agent/logs"
 
-func (self *VLanSetter) addVLan(feedKey, content, ident, containerID string) {
+func addVLan(content, ident, containerID string) bool {
 	logs.Info("Add VLAN device success", containerID, ident)
+	return true
 }

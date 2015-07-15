@@ -40,5 +40,5 @@ func load(configPath string) {
 	if err := yaml.Unmarshal(b, &Config); err != nil {
 		logs.Assert(err, "Load config file failed")
 	}
-	logs.Debug(Config)
+	logs.Debug("Configure:", Config)
 }

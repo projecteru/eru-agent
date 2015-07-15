@@ -20,6 +20,7 @@ var Apps map[string]*defines.App = map[string]*defines.App{}
 
 func InitStatus() {
 	logs.Assert(g.Docker.AddEventListener(events), "Attacher")
+	logs.Info("Status initiated")
 }
 
 func Load() {
@@ -35,21 +36,21 @@ func Load() {
 	defer g.Rds.Release(conn)
 
 	containersKey := fmt.Sprintf("eru:agent:%s:containers", g.Config.HostName)
-	logs.Debug("Get targets from", containersKey)
+	logs.Debug("Status get targets from", containersKey)
 	rep, err := gore.NewCommand("SMEMBERS", containersKey).Run(conn)
 	if err != nil {
-		logs.Assert(err, "Get targets")
+		logs.Assert(err, "Status get targets")
 	}
 	targetContainersList := []string{}
 	rep.Slice(&targetContainersList)
-	logs.Debug("Targets:", targetContainersList)
+	logs.Debug("Status targets:", targetContainersList)
 
 	targets := map[string]struct{}{}
 	for _, target := range targetContainersList {
 		targets[target] = struct{}{}
 	}
 
-	logs.Info("Load container")
+	logs.Info("Status load container")
 	for _, container := range containers {
 		if _, ok := targets[container.ID]; !ok {
 			continue
