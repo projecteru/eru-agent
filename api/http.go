@@ -18,13 +18,13 @@ func version(req *Request) interface{} {
 
 func listStatus(req *Request) interface{} {
 	return JSON{
-		"status": status.Status.Apps,
+		"status": status.Apps,
 	}
 }
 
 func addContainer(req *Request) interface{} {
 	return JSON{
-		"status": status.Status.Apps,
+		"status": status.Apps,
 	}
 }
 

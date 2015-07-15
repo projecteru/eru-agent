@@ -8,100 +8,20 @@ import (
 	"github.com/HunanTV/eru-agent/common"
 	"github.com/HunanTV/eru-agent/defines"
 	"github.com/HunanTV/eru-agent/g"
-	"github.com/HunanTV/eru-agent/lenz"
 	"github.com/HunanTV/eru-agent/logs"
 	"github.com/HunanTV/eru-agent/metrics"
-	"github.com/HunanTV/eru-agent/utils"
 	"github.com/fsouza/go-dockerclient"
 	"github.com/keimoon/gore"
 )
 
-var Status *StatusMoniter
+var events chan *docker.APIEvents = make(chan *docker.APIEvents)
+var Apps map[string]*defines.App = map[string]*defines.App{}
 
-type StatusMoniter struct {
-	events chan *docker.APIEvents
-	Apps   map[string]*defines.App
+func InitStatus() {
+	logs.Assert(g.Docker.AddEventListener(events), "Attacher")
 }
 
-func NewStatus() *StatusMoniter {
-	status := &StatusMoniter{}
-	status.events = make(chan *docker.APIEvents)
-	status.Apps = map[string]*defines.App{}
-	logs.Assert(g.Docker.AddEventListener(status.events), "Attacher")
-	return status
-}
-
-func (self *StatusMoniter) Listen() {
-	logs.Info("Status Monitor Start")
-	for event := range self.events {
-		logs.Debug("Status:", event.Status, event.ID, event.From)
-		switch event.Status {
-		case common.STATUS_DIE:
-			// Check if exists
-			if _, ok := self.Apps[event.ID]; ok {
-				go metrics.Metrics.Remove(event.ID)
-				delete(self.Apps, event.ID)
-				self.reportContainerDeath(event.ID)
-			}
-		case common.STATUS_START:
-			// if not in watching list, just ignore it
-			if self.isInWatchingSet(event.ID) {
-				container, err := g.Docker.InspectContainer(event.ID)
-				if err != nil {
-					logs.Info("Status inspect docker failed", err)
-				} else {
-					self.Add(event.ID, container.Name)
-					logs.Debug(event.ID, "cured, added in watching list")
-				}
-			}
-		}
-	}
-}
-
-func (self *StatusMoniter) getStatus(s string) string {
-	switch {
-	case strings.HasPrefix(s, "Up"):
-		return common.STATUS_START
-	default:
-		return common.STATUS_DIE
-	}
-}
-
-func (self *StatusMoniter) Watcher() {
-	conn, err := g.Rds.Acquire()
-	if err != nil || conn == nil {
-		logs.Assert(err, "Get redis conn")
-	}
-	defer g.Rds.Release(conn)
-
-	subs := gore.NewSubscriptions(conn)
-	defer subs.Close()
-	subKey := fmt.Sprintf("eru:agent:%s:watcher", g.Config.HostName)
-	logs.Debug("Watch New Container", subKey)
-	subs.Subscribe(subKey)
-
-	for message := range subs.Message() {
-		if message == nil {
-			break
-		}
-		command := string(message.Message)
-		logs.Debug("Get command", command)
-		parser := strings.Split(command, "|")
-		control, containerID := parser[0], parser[1]
-		switch control {
-		case "+":
-			logs.Info("Watch", containerID)
-			container, err := g.Docker.InspectContainer(containerID)
-			if err != nil {
-				logs.Info("Status inspect docker failed", err)
-			} else {
-				self.Add(containerID, container.Name)
-			}
-		}
-	}
-}
-
-func (self *StatusMoniter) Load() {
+func Load() {
 	containers, err := g.Docker.ListContainers(docker.ListContainersOptions{All: true})
 	if err != nil {
 		logs.Assert(err, "List containers")
@@ -129,40 +49,82 @@ func (self *StatusMoniter) Load() {
 	}
 
 	logs.Info("Load container")
-
 	for _, container := range containers {
 		if _, ok := targets[container.ID]; !ok {
 			continue
 		}
-		status := self.getStatus(container.Status)
+		status := getStatus(container.Status)
 		if status != common.STATUS_START {
-			self.reportContainerDeath(container.ID)
+			reportContainerDeath(container.ID)
 			continue
 		}
-		self.Add(container.ID, container.Names[0])
+		if app := defines.NewApp(container.ID, container.Names[0]); app != nil {
+			Add(app)
+			//go metrics.Metrics.Add(app.ID, app)
+			//lenz.Lenz.Attacher.Attach(app.ID, app)
+			//TODO Add metrics
+			//TODO add attacher
+			reportContainerCure(container.ID)
+		}
 	}
 }
 
-func (self *StatusMoniter) Add(ID, containerName string) {
-	if _, ok := self.Apps[ID]; ok {
+func Add(app *defines.App) {
+	if _, ok := Apps[app.ID]; ok {
 		// safe add
 		return
 	}
-	name, entrypoint, ident := utils.GetAppInfo(containerName)
-	if name == "" {
-		// ignore
-		logs.Info("Container name invald", containerName)
-		return
-	}
-	logs.Debug("Container", name, entrypoint, ident)
-	app := &defines.App{ID, name, entrypoint, ident}
-	self.Apps[ID] = app
-	go metrics.Metrics.Add(ID, app)
-	lenz.Lenz.Attacher.Attach(ID, app)
-	self.reportContainerCure(ID)
+	Apps[app.ID] = app
 }
 
-func (self *StatusMoniter) isInWatchingSet(cid string) bool {
+func StartMonitor() {
+	logs.Info("Status Monitor Start")
+	go monitor()
+}
+
+func monitor() {
+	for event := range events {
+		logs.Debug("Status:", event.Status, event.ID, event.From)
+		switch event.Status {
+		case common.STATUS_DIE:
+			// Check if exists
+			if _, ok := Apps[event.ID]; ok {
+				//TODO fix metrics
+				go metrics.Metrics.Remove(event.ID)
+				delete(Apps, event.ID)
+				reportContainerDeath(event.ID)
+			}
+		case common.STATUS_START:
+			// if not in watching list, just ignore it
+			if isInWatchingSet(event.ID) {
+				container, err := g.Docker.InspectContainer(event.ID)
+				if err != nil {
+					logs.Info("Status inspect docker failed", err)
+					break
+				}
+				if app := defines.NewApp(event.ID, container.Name); app != nil {
+					Add(app)
+					//go metrics.Metrics.Add(app.ID, app)
+					//lenz.Lenz.Attacher.Attach(app.ID, app)
+					//TODO Add metrics
+					//TODO add attacher
+					logs.Debug(event.ID, "cured, added in watching list")
+				}
+			}
+		}
+	}
+}
+
+func getStatus(s string) string {
+	switch {
+	case strings.HasPrefix(s, "Up"):
+		return common.STATUS_START
+	default:
+		return common.STATUS_DIE
+	}
+}
+
+func isInWatchingSet(cid string) bool {
 	conn, err := g.Rds.Acquire()
 	if err != nil || conn == nil {
 		logs.Assert(err, "Get redis conn")
@@ -178,7 +140,7 @@ func (self *StatusMoniter) isInWatchingSet(cid string) bool {
 	return repInt == 1
 }
 
-func (self *StatusMoniter) reportContainerDeath(cid string) {
+func reportContainerDeath(cid string) {
 	conn, err := g.Rds.Acquire()
 	if err != nil || conn == nil {
 		logs.Assert(err, "Get redis conn")
@@ -200,9 +162,43 @@ func (self *StatusMoniter) reportContainerDeath(cid string) {
 	client.Do(req)
 }
 
-func (self *StatusMoniter) reportContainerCure(cid string) {
+func reportContainerCure(cid string) {
 	url := fmt.Sprintf("%s/api/container/%s/cure", g.Config.Eru.Endpoint, cid)
 	client := &http.Client{}
 	req, _ := http.NewRequest("PUT", url, nil)
 	client.Do(req)
 }
+
+//func (self *StatusMoniter) Watcher() {
+//	conn, err := g.Rds.Acquire()
+//	if err != nil || conn == nil {
+//		logs.Assert(err, "Get redis conn")
+//	}
+//	defer g.Rds.Release(conn)
+//
+//	subs := gore.NewSubscriptions(conn)
+//	defer subs.Close()
+//	subKey := fmt.Sprintf("eru:agent:%s:watcher", g.Config.HostName)
+//	logs.Debug("Watch New Container", subKey)
+//	subs.Subscribe(subKey)
+//
+//	for message := range subs.Message() {
+//		if message == nil {
+//			break
+//		}
+//		command := string(message.Message)
+//		logs.Debug("Get command", command)
+//		parser := strings.Split(command, "|")
+//		control, containerID := parser[0], parser[1]
+//		switch control {
+//		case "+":
+//			logs.Info("Watch", containerID)
+//			container, err := g.Docker.InspectContainer(containerID)
+//			if err != nil {
+//				logs.Info("Status inspect docker failed", err)
+//			} else {
+//				self.Add(containerID, container.Name)
+//			}
+//		}
+//	}
+//}
