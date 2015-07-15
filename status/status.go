@@ -165,37 +165,3 @@ func reportContainerCure(cid string) {
 	req, _ := http.NewRequest("PUT", url, nil)
 	client.Do(req)
 }
-
-//func (self *StatusMoniter) Watcher() {
-//	conn, err := g.Rds.Acquire()
-//	if err != nil || conn == nil {
-//		logs.Assert(err, "Get redis conn")
-//	}
-//	defer g.Rds.Release(conn)
-//
-//	subs := gore.NewSubscriptions(conn)
-//	defer subs.Close()
-//	subKey := fmt.Sprintf("eru:agent:%s:watcher", g.Config.HostName)
-//	logs.Debug("Watch New Container", subKey)
-//	subs.Subscribe(subKey)
-//
-//	for message := range subs.Message() {
-//		if message == nil {
-//			break
-//		}
-//		command := string(message.Message)
-//		logs.Debug("Get command", command)
-//		parser := strings.Split(command, "|")
-//		control, containerID := parser[0], parser[1]
-//		switch control {
-//		case "+":
-//			logs.Info("Watch", containerID)
-//			container, err := g.Docker.InspectContainer(containerID)
-//			if err != nil {
-//				logs.Info("Status inspect docker failed", err)
-//			} else {
-//				self.Add(containerID, container.Name)
-//			}
-//		}
-//	}
-//}

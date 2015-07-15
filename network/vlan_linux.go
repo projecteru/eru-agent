@@ -1,28 +1,17 @@
 package network
 
 import (
-	"fmt"
 	"net"
 	"os/exec"
 	"strconv"
-	"strings"
 
-	"github.com/HunanTV/eru-agent/common"
 	"github.com/HunanTV/eru-agent/g"
 	"github.com/HunanTV/eru-agent/logs"
 	"github.com/docker/libcontainer/netlink"
 )
 
-func addVLan(content, ident, containerID string) bool {
-	parser := strings.Split(content, ":")
-	if len(parser) != 2 {
-		logs.Info("Seq and Ips Invaild", content)
-		return false
-	}
-	seq, ips := parser[0], parser[1]
-
+func AddVLan(vethName, ips, ident, containerID string) bool {
 	device, _ := Devices.Get(ident, 0)
-	vethName := fmt.Sprintf("%s%s", common.VLAN_PREFIX, seq)
 	logs.Info("Add new VLan to", vethName, containerID)
 
 	if err := netlink.NetworkLinkAddMacVlan(device, vethName, "bridge"); err != nil {
@@ -55,6 +44,6 @@ func addVLan(content, ident, containerID string) bool {
 		logs.Info("Set up veth in container failed", err)
 		return false
 	}
-	logs.Info("Add VLAN device success", containerID, ident)
+	logs.Info("Add VLAN device success", containerID)
 	return true
 }
