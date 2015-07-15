@@ -105,6 +105,7 @@ func monitor() {
 					Add(app)
 					lenz.Attacher.Attach(app)
 					metrics.Add(app)
+					reportContainerCure(event.ID)
 					logs.Debug(event.ID, "cured, added in watching list")
 				}
 			}
