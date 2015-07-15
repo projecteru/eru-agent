@@ -10,6 +10,7 @@ import (
 	"github.com/HunanTV/eru-agent/health"
 	"github.com/HunanTV/eru-agent/lenz"
 	"github.com/HunanTV/eru-agent/logs"
+	"github.com/HunanTV/eru-agent/metrics"
 	"github.com/HunanTV/eru-agent/status"
 	"github.com/HunanTV/eru-agent/utils"
 )
@@ -21,20 +22,20 @@ func main() {
 	g.InitialConn()
 	defer g.CloseConn()
 
-	//metrics.Metrics = metrics.NewMetricsRecorder()
 	lenz.InitLenz()
 	status.InitStatus()
+	metrics.InitMetrics()
 
 	utils.WritePid(g.Config.PidFile)
 	defer os.Remove(g.Config.PidFile)
 
-	//VLan = NewVLanSetter()
+	//VLan = NewVLanSetter(
 	//go VLan.Watcher()
 	// Watch Lan first
 	status.Load()
 	status.StartMonitor()
-	//go status.Status.Watcher()
 	health.Check()
+	//go status.Status.Watcher()
 
 	if g.Config.API.Http {
 		go api.HTTPServe()

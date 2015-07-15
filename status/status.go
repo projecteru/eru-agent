@@ -62,9 +62,7 @@ func Load() {
 		if app := defines.NewApp(container.ID, container.Names[0]); app != nil {
 			Add(app)
 			lenz.Attacher.Attach(app)
-
-			//go metrics.Metrics.Add(app.ID, app)
-			//TODO Add metrics
+			metrics.Add(app)
 			reportContainerCure(container.ID)
 		}
 	}
@@ -90,8 +88,7 @@ func monitor() {
 		case common.STATUS_DIE:
 			// Check if exists
 			if _, ok := Apps[event.ID]; ok {
-				//TODO fix metrics
-				go metrics.Metrics.Remove(event.ID)
+				metrics.Remove(event.ID)
 				delete(Apps, event.ID)
 				reportContainerDeath(event.ID)
 			}
@@ -106,8 +103,7 @@ func monitor() {
 				if app := defines.NewApp(event.ID, container.Name); app != nil {
 					Add(app)
 					lenz.Attacher.Attach(app)
-					//go metrics.Metrics.Add(app.ID, app)
-					//TODO Add metrics
+					metrics.Add(app)
 					logs.Debug(event.ID, "cured, added in watching list")
 				}
 			}

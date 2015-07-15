@@ -9,58 +9,54 @@ import (
 	"github.com/HunanTV/eru-agent/g"
 )
 
-var Metrics *MetricsRecorder
+var lock sync.RWMutex
+var step, rpcTimeout time.Duration
+var transfers *consistent.Consistent
 
-type MetricsRecorder struct {
-	sync.RWMutex
-	apps       map[string]struct{}
-	step       time.Duration
-	rpcTimeout time.Duration
-	transfers  *consistent.Consistent
-}
+var Apps map[string]struct{}
 
-func NewMetricsRecorder() *MetricsRecorder {
-	r := &MetricsRecorder{}
-	r.apps = map[string]struct{}{}
-	r.transfers = consistent.New()
-	r.step = time.Duration(g.Config.Metrics.Step) * time.Second
-	r.rpcTimeout = time.Duration(g.Config.Metrics.Timeout) * time.Millisecond
+func InitMetrics() {
+	lock = sync.RWMutex{}
+	step = time.Duration(g.Config.Metrics.Step) * time.Second
+	rpcTimeout = time.Duration(g.Config.Metrics.Timeout) * time.Millisecond
+	transfers = consistent.New()
 	for _, transfer := range g.Config.Metrics.Transfers {
-		r.transfers.Add(transfer)
+		transfers.Add(transfer)
 	}
-	return r
+
+	Apps = map[string]struct{}{}
 }
 
-func (self *MetricsRecorder) Add(ID string, app *defines.App) {
-	self.Lock()
-	defer self.Unlock()
-	if _, ok := self.apps[ID]; ok {
+func Add(app *defines.App) {
+	lock.Lock()
+	defer lock.Unlock()
+	if _, ok := Apps[app.ID]; ok {
 		return
 	}
 
-	addr, _ := self.transfers.Get(ID, 0)
+	addr, _ := transfers.Get(app.ID, 0)
 	client := SingleConnRpcClient{
 		RpcServer: addr,
-		Timeout:   self.rpcTimeout,
+		Timeout:   rpcTimeout,
 	}
 
-	metric := NewMetricData(app, client, self.step)
+	metric := NewMetricData(app, client, step)
 	go metric.Report()
-	self.apps[ID] = struct{}{}
+	Apps[app.ID] = struct{}{}
 }
 
-func (self *MetricsRecorder) Remove(ID string) {
-	self.Lock()
-	defer self.Unlock()
-	defer delete(self.apps, ID)
-	if _, ok := self.apps[ID]; !ok {
+func Remove(ID string) {
+	lock.Lock()
+	defer lock.Unlock()
+	if _, ok := Apps[ID]; !ok {
 		return
 	}
+	delete(Apps, ID)
 }
 
-func (self *MetricsRecorder) Vaild(ID string) bool {
-	self.RLock()
-	defer self.RUnlock()
-	_, ok := self.apps[ID]
+func vaild(ID string) bool {
+	lock.RLock()
+	defer lock.RUnlock()
+	_, ok := Apps[ID]
 	return ok
 }

@@ -166,7 +166,7 @@ func (self *MetricData) Report() {
 	for {
 		select {
 		case now := <-time.After(self.step):
-			if !Metrics.Vaild(self.app.ID) {
+			if !vaild(self.app.ID) {
 				return
 			}
 			if !self.updateStats() {

@@ -10,7 +10,7 @@ import (
 )
 
 func Check() {
-	go Ping()
+	go ping()
 }
 
 func ping() {
