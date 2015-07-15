@@ -43,14 +43,12 @@ func (this *SingleConnRpcClient) insureConn() {
 			return
 		}
 
-		logs.Info("Dial fail", this.RpcServer, err)
-
+		logs.Info("Metrics dial fail", this.RpcServer, err)
 		if retry > 6 {
 			retry = 1
 		}
 
 		time.Sleep(time.Duration(math.Pow(2.0, float64(retry))) * time.Second)
-
 		retry++
 	}
 }
@@ -72,7 +70,7 @@ func (this *SingleConnRpcClient) Call(method string, args interface{}, reply int
 
 	select {
 	case <-time.After(timeout):
-		logs.Info("[WARN] Rpc call timeout", this.rpcClient, this.RpcServer)
+		logs.Info("Metrics rpc call timeout", this.rpcClient, this.RpcServer)
 		this.close()
 	case err := <-done:
 		if err != nil {

@@ -120,7 +120,7 @@ func (self *MetricData) calcRate(now time.Time) {
 	}
 }
 
-func (self *MetricData) send() {
+func (self *MetricData) getData() []*model.MetricValue {
 	data := []*model.MetricValue{}
 	for k, d := range self.info {
 		if !strings.HasPrefix(k, "mem") {
@@ -131,13 +131,16 @@ func (self *MetricData) send() {
 	for k, d := range self.rate {
 		data = append(data, self.newMetricValue(k, d))
 	}
+	return data
+}
+
+func (self *MetricData) send(data []*model.MetricValue) {
 	var resp model.TransferResponse
 	if err := self.rpcClient.Call("Transfer.Update", data, &resp); err != nil {
 		logs.Debug("call Transfer.Update fail", err)
-	} else {
-		logs.Debug(self.endpoint, self.last, &resp)
+		return
 	}
-	logs.Info(self.endpoint, self.last, resp.Total)
+	logs.Debug(self.endpoint, self.last, &resp)
 }
 
 func (self *MetricData) newMetricValue(metric string, value interface{}) *model.MetricValue {
@@ -175,7 +178,8 @@ func (self *MetricData) Report() {
 			}
 			self.calcRate(now)
 			self.last = now
-			self.send()
+			data := self.getData()
+			go self.send(data)
 			self.saveLast()
 		}
 	}

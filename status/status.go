@@ -78,13 +78,13 @@ func Add(app *defines.App) {
 }
 
 func StartMonitor() {
-	logs.Info("Status Monitor Start")
+	logs.Info("Status monitor start")
 	go monitor()
 }
 
 func monitor() {
 	for event := range events {
-		logs.Debug("Status:", event.Status, event.ID, event.From)
+		logs.Debug("Status", event.Status, event.ID, event.From)
 		switch event.Status {
 		case common.STATUS_DIE:
 			// Check if exists

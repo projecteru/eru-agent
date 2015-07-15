@@ -96,7 +96,7 @@ func statusWatcher() {
 		control, containerID := parser[0], parser[1]
 		switch control {
 		case "+":
-			logs.Info("Watch", containerID)
+			logs.Info("API status watch", containerID)
 			container, err := g.Docker.InspectContainer(containerID)
 			if err != nil {
 				logs.Info("Status inspect docker failed", err)
