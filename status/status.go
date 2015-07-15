@@ -8,6 +8,7 @@ import (
 	"github.com/HunanTV/eru-agent/common"
 	"github.com/HunanTV/eru-agent/defines"
 	"github.com/HunanTV/eru-agent/g"
+	"github.com/HunanTV/eru-agent/lenz"
 	"github.com/HunanTV/eru-agent/logs"
 	"github.com/HunanTV/eru-agent/metrics"
 	"github.com/fsouza/go-dockerclient"
@@ -60,10 +61,10 @@ func Load() {
 		}
 		if app := defines.NewApp(container.ID, container.Names[0]); app != nil {
 			Add(app)
+			lenz.Attacher.Attach(app)
+
 			//go metrics.Metrics.Add(app.ID, app)
-			//lenz.Lenz.Attacher.Attach(app.ID, app)
 			//TODO Add metrics
-			//TODO add attacher
 			reportContainerCure(container.ID)
 		}
 	}
@@ -104,10 +105,9 @@ func monitor() {
 				}
 				if app := defines.NewApp(event.ID, container.Name); app != nil {
 					Add(app)
+					lenz.Attacher.Attach(app)
 					//go metrics.Metrics.Add(app.ID, app)
-					//lenz.Lenz.Attacher.Attach(app.ID, app)
 					//TODO Add metrics
-					//TODO add attacher
 					logs.Debug(event.ID, "cured, added in watching list")
 				}
 			}

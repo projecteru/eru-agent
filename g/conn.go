@@ -32,3 +32,7 @@ func InitialConn() {
 		logs.Assert(err, "Docker")
 	}
 }
+
+func CloseConn() {
+	Rds.Close()
+}

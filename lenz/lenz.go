@@ -8,31 +8,23 @@ import (
 	"github.com/HunanTV/eru-agent/logs"
 )
 
-var Lenz *LenzForwarder
+var Attacher *AttachManager
+var Router *RouteManager
+var Routefs RouteFileStore
 
-type LenzForwarder struct {
-	Attacher *AttachManager
-	Router   *RouteManager
-	Routefs  RouteFileStore
-}
-
-func NewLenz() *LenzForwarder {
-	obj := &LenzForwarder{}
-	obj.Attacher = NewAttachManager(g.Docker)
-	obj.Router = NewRouteManager(obj.Attacher, g.Config.Lenz.Stdout)
-	obj.Routefs = RouteFileStore(g.Config.Lenz.Routes)
-
+func InitLenz() {
+	Attacher = NewAttachManager(g.Docker)
+	Router = NewRouteManager(Attacher, g.Config.Lenz.Stdout)
+	Routefs = RouteFileStore(g.Config.Lenz.Routes)
 	if len(g.Config.Lenz.Forwards) > 0 {
 		logs.Info("Routing all to", g.Config.Lenz.Forwards)
 		target := defines.Target{Addrs: g.Config.Lenz.Forwards}
 		route := defines.Route{ID: "lenz_default", Target: &target}
 		route.LoadBackends()
-		obj.Router.Add(&route)
+		Router.Add(&route)
 	}
-
 	if _, err := os.Stat(g.Config.Lenz.Routes); err == nil {
 		logs.Info("Loading and persisting routes in", g.Config.Lenz.Routes)
-		logs.Assert(obj.Router.Load(obj.Routefs), "persistor")
+		logs.Assert(Router.Load(Routefs), "persistor")
 	}
-	return obj
 }

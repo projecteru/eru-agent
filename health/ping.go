@@ -1,4 +1,4 @@
-package main
+package health
 
 import (
 	"fmt"
@@ -9,7 +9,11 @@ import (
 	"github.com/HunanTV/eru-agent/logs"
 )
 
-func Ping() {
+func Check() {
+	go Ping()
+}
+
+func ping() {
 	ticker := time.Tick(time.Duration(g.Config.Docker.Health) * time.Second)
 	for _ = range ticker {
 		if err := g.Docker.Ping(); err != nil {
