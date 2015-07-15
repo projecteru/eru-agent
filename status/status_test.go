@@ -5,6 +5,7 @@ import (
 
 	"github.com/HunanTV/eru-agent/common"
 	"github.com/HunanTV/eru-agent/defines"
+	"github.com/HunanTV/eru-agent/g"
 	"github.com/fsouza/go-dockerclient"
 )
 
@@ -27,12 +28,12 @@ func Test_StatusListen(t *testing.T) {
 	go Status.Listen()
 	id := "abcdefghijklmnopqrstuvwxyz"
 	event := &docker.APIEvents{"die", id, "test", 12345}
-	common.Docker.InspectContainer = func(string) (*docker.Container, error) {
+	g.Docker.InspectContainer = func(string) (*docker.Container, error) {
 		t.Error("Wrong event")
 		return nil, nil
 	}
 	Status.Apps[id] = &defines.App{}
-	common.Docker.InspectContainer = func(i string) (*docker.Container, error) {
+	g.Docker.InspectContainer = func(i string) (*docker.Container, error) {
 		if i != id {
 			t.Error("Wrong event")
 		}

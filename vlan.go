@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/CMGS/consistent"
-	"github.com/HunanTV/eru-agent/common"
+	"github.com/HunanTV/eru-agent/g"
 	"github.com/HunanTV/eru-agent/logs"
 	"github.com/docker/libcontainer/netlink"
 	"github.com/keimoon/gore"
@@ -18,22 +18,22 @@ type VLanSetter struct {
 func NewVLanSetter() *VLanSetter {
 	v := &VLanSetter{}
 	v.Devices = consistent.New()
-	for _, device := range config.VLan.Physical {
+	for _, device := range g.Config.VLan.Physical {
 		v.Devices.Add(device)
 	}
 	return v
 }
 
 func (self *VLanSetter) Watcher() {
-	conn, err := common.Rds.Acquire()
+	conn, err := g.Rds.Acquire()
 	if err != nil || conn == nil {
 		logs.Assert(err, "Get redis conn")
 	}
-	defer common.Rds.Release(conn)
+	defer g.Rds.Release(conn)
 
 	subs := gore.NewSubscriptions(conn)
 	defer subs.Close()
-	subKey := fmt.Sprintf("eru:agent:%s:vlan", config.HostName)
+	subKey := fmt.Sprintf("eru:agent:%s:vlan", g.Config.HostName)
 	logs.Debug("Watch VLan Config", subKey)
 	subs.Subscribe(subKey)
 

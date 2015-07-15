@@ -1,4 +1,4 @@
-package main
+package g
 
 import (
 	"flag"
@@ -11,7 +11,7 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-var config = defines.AgentConfig{}
+var Config = defines.AgentConfig{}
 
 func LoadConfig() {
 	var configPath string
@@ -37,8 +37,8 @@ func load(configPath string) {
 		logs.Assert(err, "Read config file failed")
 	}
 
-	if err := yaml.Unmarshal(b, &config); err != nil {
+	if err := yaml.Unmarshal(b, &Config); err != nil {
 		logs.Assert(err, "Load config file failed")
 	}
-	logs.Debug(config)
+	logs.Debug(Config)
 }

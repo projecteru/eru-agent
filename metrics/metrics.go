@@ -5,27 +5,27 @@ import (
 	"time"
 
 	"github.com/CMGS/consistent"
-
 	"github.com/HunanTV/eru-agent/defines"
+	"github.com/HunanTV/eru-agent/g"
 )
+
+var Metrics *MetricsRecorder
 
 type MetricsRecorder struct {
 	sync.RWMutex
 	apps       map[string]struct{}
 	step       time.Duration
-	hostname   string
 	rpcTimeout time.Duration
 	transfers  *consistent.Consistent
 }
 
-func NewMetricsRecorder(hostname string, config defines.MetricsConfig) *MetricsRecorder {
+func NewMetricsRecorder() *MetricsRecorder {
 	r := &MetricsRecorder{}
-	r.hostname = hostname
 	r.apps = map[string]struct{}{}
 	r.transfers = consistent.New()
-	r.step = time.Duration(config.Step) * time.Second
-	r.rpcTimeout = time.Duration(config.Timeout) * time.Millisecond
-	for _, transfer := range config.Transfers {
+	r.step = time.Duration(g.Config.Metrics.Step) * time.Second
+	r.rpcTimeout = time.Duration(g.Config.Metrics.Timeout) * time.Millisecond
+	for _, transfer := range g.Config.Metrics.Transfers {
 		r.transfers.Add(transfer)
 	}
 	return r
@@ -44,7 +44,7 @@ func (self *MetricsRecorder) Add(ID string, app *defines.App) {
 		Timeout:   self.rpcTimeout,
 	}
 
-	metric := NewMetricData(app, client, self.step, self.hostname)
+	metric := NewMetricData(app, client, self.step)
 	go metric.Report()
 	self.apps[ID] = struct{}{}
 }
@@ -64,5 +64,3 @@ func (self *MetricsRecorder) Vaild(ID string) bool {
 	_, ok := self.apps[ID]
 	return ok
 }
-
-var Metrics *MetricsRecorder

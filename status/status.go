@@ -7,6 +7,7 @@ import (
 
 	"github.com/HunanTV/eru-agent/common"
 	"github.com/HunanTV/eru-agent/defines"
+	"github.com/HunanTV/eru-agent/g"
 	"github.com/HunanTV/eru-agent/lenz"
 	"github.com/HunanTV/eru-agent/logs"
 	"github.com/HunanTV/eru-agent/metrics"
@@ -18,19 +19,15 @@ import (
 var Status *StatusMoniter
 
 type StatusMoniter struct {
-	HostName string
-	Endpoint string
-	events   chan *docker.APIEvents
-	Apps     map[string]*defines.App
+	events chan *docker.APIEvents
+	Apps   map[string]*defines.App
 }
 
-func NewStatus(hostname, endpoint string) *StatusMoniter {
+func NewStatus() *StatusMoniter {
 	status := &StatusMoniter{}
-	status.HostName = hostname
-	status.Endpoint = endpoint
 	status.events = make(chan *docker.APIEvents)
 	status.Apps = map[string]*defines.App{}
-	logs.Assert(common.Docker.AddEventListener(status.events), "Attacher")
+	logs.Assert(g.Docker.AddEventListener(status.events), "Attacher")
 	return status
 }
 
@@ -49,7 +46,7 @@ func (self *StatusMoniter) Listen() {
 		case common.STATUS_START:
 			// if not in watching list, just ignore it
 			if self.isInWatchingSet(event.ID) {
-				container, err := common.Docker.InspectContainer(event.ID)
+				container, err := g.Docker.InspectContainer(event.ID)
 				if err != nil {
 					logs.Info("Status inspect docker failed", err)
 				} else {
@@ -71,15 +68,15 @@ func (self *StatusMoniter) getStatus(s string) string {
 }
 
 func (self *StatusMoniter) Watcher() {
-	conn, err := common.Rds.Acquire()
+	conn, err := g.Rds.Acquire()
 	if err != nil || conn == nil {
 		logs.Assert(err, "Get redis conn")
 	}
-	defer common.Rds.Release(conn)
+	defer g.Rds.Release(conn)
 
 	subs := gore.NewSubscriptions(conn)
 	defer subs.Close()
-	subKey := fmt.Sprintf("eru:agent:%s:watcher", self.HostName)
+	subKey := fmt.Sprintf("eru:agent:%s:watcher", g.Config.HostName)
 	logs.Debug("Watch New Container", subKey)
 	subs.Subscribe(subKey)
 
@@ -94,7 +91,7 @@ func (self *StatusMoniter) Watcher() {
 		switch control {
 		case "+":
 			logs.Info("Watch", containerID)
-			container, err := common.Docker.InspectContainer(containerID)
+			container, err := g.Docker.InspectContainer(containerID)
 			if err != nil {
 				logs.Info("Status inspect docker failed", err)
 			} else {
@@ -105,18 +102,18 @@ func (self *StatusMoniter) Watcher() {
 }
 
 func (self *StatusMoniter) Load() {
-	containers, err := common.Docker.ListContainers(docker.ListContainersOptions{All: true})
+	containers, err := g.Docker.ListContainers(docker.ListContainersOptions{All: true})
 	if err != nil {
 		logs.Assert(err, "List containers")
 	}
 
-	conn, err := common.Rds.Acquire()
+	conn, err := g.Rds.Acquire()
 	if err != nil || conn == nil {
 		logs.Assert(err, "Get redis conn")
 	}
-	defer common.Rds.Release(conn)
+	defer g.Rds.Release(conn)
 
-	containersKey := fmt.Sprintf("eru:agent:%s:containers", self.HostName)
+	containersKey := fmt.Sprintf("eru:agent:%s:containers", g.Config.HostName)
 	logs.Debug("Get targets from", containersKey)
 	rep, err := gore.NewCommand("SMEMBERS", containersKey).Run(conn)
 	if err != nil {
@@ -166,13 +163,13 @@ func (self *StatusMoniter) Add(ID, containerName string) {
 }
 
 func (self *StatusMoniter) isInWatchingSet(cid string) bool {
-	conn, err := common.Rds.Acquire()
+	conn, err := g.Rds.Acquire()
 	if err != nil || conn == nil {
 		logs.Assert(err, "Get redis conn")
 	}
-	defer common.Rds.Release(conn)
+	defer g.Rds.Release(conn)
 
-	containersKey := fmt.Sprintf("eru:agent:%s:containers", self.HostName)
+	containersKey := fmt.Sprintf("eru:agent:%s:containers", g.Config.HostName)
 	rep, err := gore.NewCommand("SISMEMBER", containersKey, cid).Run(conn)
 	if err != nil {
 		logs.Assert(err, "Get targets")
@@ -182,11 +179,11 @@ func (self *StatusMoniter) isInWatchingSet(cid string) bool {
 }
 
 func (self *StatusMoniter) reportContainerDeath(cid string) {
-	conn, err := common.Rds.Acquire()
+	conn, err := g.Rds.Acquire()
 	if err != nil || conn == nil {
 		logs.Assert(err, "Get redis conn")
 	}
-	defer common.Rds.Release(conn)
+	defer g.Rds.Release(conn)
 
 	rep, err := gore.NewCommand("GET", fmt.Sprintf("eru:agent:%s:container:flag", cid)).Run(conn)
 	if err != nil {
@@ -197,14 +194,14 @@ func (self *StatusMoniter) reportContainerDeath(cid string) {
 		return
 	}
 
-	url := fmt.Sprintf("%s/api/container/%s/kill", self.Endpoint, cid)
+	url := fmt.Sprintf("%s/api/container/%s/kill", g.Config.Eru.Endpoint, cid)
 	client := &http.Client{}
 	req, _ := http.NewRequest("PUT", url, nil)
 	client.Do(req)
 }
 
 func (self *StatusMoniter) reportContainerCure(cid string) {
-	url := fmt.Sprintf("%s/api/container/%s/cure", self.Endpoint, cid)
+	url := fmt.Sprintf("%s/api/container/%s/cure", g.Config.Eru.Endpoint, cid)
 	client := &http.Client{}
 	req, _ := http.NewRequest("PUT", url, nil)
 	client.Do(req)

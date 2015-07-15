@@ -7,6 +7,7 @@ import (
 
 	"github.com/HunanTV/eru-agent/common"
 	"github.com/HunanTV/eru-agent/defines"
+	"github.com/HunanTV/eru-agent/g"
 	"github.com/HunanTV/eru-agent/logs"
 	"github.com/fsouza/go-dockerclient"
 	"github.com/open-falcon/common/model"
@@ -26,7 +27,7 @@ type MetricData struct {
 	rate map[string]float64
 }
 
-func NewMetricData(app *defines.App, client SingleConnRpcClient, step time.Duration, hostname string) *MetricData {
+func NewMetricData(app *defines.App, client SingleConnRpcClient, step time.Duration) *MetricData {
 	m := &MetricData{}
 	m.app = app
 	m.rpcClient = client
@@ -36,7 +37,7 @@ func NewMetricData(app *defines.App, client SingleConnRpcClient, step time.Durat
 	m.rate = map[string]float64{}
 	m.tag = fmt.Sprintf(
 		"hostname=%s,cid=%s,ident=%s",
-		hostname, app.ID[:12], app.Ident,
+		g.Config.HostName, app.ID[:12], app.Ident,
 	)
 	m.endpoint = fmt.Sprintf("%s-%s", app.Name, app.EntryPoint)
 	return m
@@ -44,7 +45,7 @@ func NewMetricData(app *defines.App, client SingleConnRpcClient, step time.Durat
 
 func (self *MetricData) setExec() (err error) {
 	cid := self.app.ID
-	self.exec, err = common.Docker.CreateExec(
+	self.exec, err = g.Docker.CreateExec(
 		docker.CreateExecOptions{
 			AttachStdout: true,
 			Cmd: []string{
@@ -64,7 +65,7 @@ func (self *MetricData) updateStats() bool {
 	statsChan := make(chan *docker.Stats)
 	opt := docker.StatsOptions{self.app.ID, statsChan, false}
 	go func() {
-		if err := common.Docker.Stats(opt); err != nil {
+		if err := g.Docker.Stats(opt); err != nil {
 			logs.Info("Get Stats Failed", err)
 		}
 	}()

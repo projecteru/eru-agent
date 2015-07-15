@@ -8,19 +8,19 @@ import (
 	"strings"
 
 	"github.com/HunanTV/eru-agent/common"
+	"github.com/HunanTV/eru-agent/g"
 	"github.com/HunanTV/eru-agent/logs"
-
 	"github.com/docker/libcontainer/netlink"
 	"github.com/keimoon/gore"
 )
 
 func (self *VLanSetter) addVLan(feedKey, content, ident, containerID string) {
-	conn, err := common.Rds.Acquire()
+	conn, err := g.Rds.Acquire()
 	if err != nil || conn == nil {
 		logs.Info(err, "Get redis conn")
 		return
 	}
-	defer common.Rds.Release(conn)
+	defer g.Rds.Release(conn)
 
 	parser := strings.Split(content, ":")
 	if len(parser) != 2 {
@@ -39,7 +39,7 @@ func (self *VLanSetter) addVLan(feedKey, content, ident, containerID string) {
 		return
 	}
 
-	container, err := common.Docker.InspectContainer(containerID)
+	container, err := g.Docker.InspectContainer(containerID)
 	if err != nil {
 		gore.NewCommand("LPUSH", feedKey, fmt.Sprintf("0|||")).Run(conn)
 		logs.Info("VLanSetter inspect docker failed", err)

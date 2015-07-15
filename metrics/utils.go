@@ -7,8 +7,8 @@ import (
 	"strings"
 
 	"github.com/HunanTV/eru-agent/common"
+	"github.com/HunanTV/eru-agent/g"
 	"github.com/HunanTV/eru-agent/logs"
-
 	"github.com/fsouza/go-dockerclient"
 )
 
@@ -20,7 +20,7 @@ func GetNetStats(exec *docker.Exec) (result map[string]uint64, err error) {
 	failure := make(chan error)
 	go func() {
 		// TODO: 防止被err流block, 删掉先, 之后记得补上
-		err = common.Docker.StartExec(
+		err = g.Docker.StartExec(
 			exec.ID,
 			docker.StartExecOptions{
 				OutputStream: outw,

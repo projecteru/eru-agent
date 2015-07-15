@@ -1,16 +1,12 @@
 package main
 
 import (
-	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
 
-	"github.com/keimoon/gore"
-
 	"github.com/HunanTV/eru-agent/api"
-	"github.com/HunanTV/eru-agent/common"
-	"github.com/HunanTV/eru-agent/defines"
+	"github.com/HunanTV/eru-agent/g"
 	"github.com/HunanTV/eru-agent/lenz"
 	"github.com/HunanTV/eru-agent/logs"
 	"github.com/HunanTV/eru-agent/metrics"
@@ -21,35 +17,16 @@ import (
 var VLan *VLanSetter
 
 func main() {
-	var err error
-	LoadConfig()
+	g.LoadConfig()
+	g.InitialConn()
+	defer g.Rds.Close()
 
-	common.Rds = &gore.Pool{
-		InitialConn: config.Redis.Min,
-		MaximumConn: config.Redis.Max,
-	}
+	lenz.Lenz = lenz.NewLenz()
+	metrics.Metrics = metrics.NewMetricsRecorder()
+	status.Status = status.NewStatus()
 
-	redisHost := fmt.Sprintf("%s:%d", config.Redis.Host, config.Redis.Port)
-	if err := common.Rds.Dial(redisHost); err != nil {
-		logs.Assert(err, "Redis init failed")
-	}
-	defer common.Rds.Close()
-
-	if common.Docker, err = defines.NewDocker(
-		config.Docker.Endpoint,
-		config.Docker.Cert,
-		config.Docker.Key,
-		config.Docker.Ca,
-	); err != nil {
-		logs.Assert(err, "Docker")
-	}
-
-	lenz.Lenz = lenz.NewLenz(config.Lenz)
-	metrics.Metrics = metrics.NewMetricsRecorder(config.HostName, config.Metrics)
-	status.Status = status.NewStatus(config.HostName, config.Eru.Endpoint)
-
-	utils.WritePid(config.PidFile)
-	defer os.Remove(config.PidFile)
+	utils.WritePid(g.Config.PidFile)
+	defer os.Remove(g.Config.PidFile)
 
 	VLan = NewVLanSetter()
 	go VLan.Watcher()
@@ -58,8 +35,8 @@ func main() {
 	go status.Status.Listen()
 	go Ping()
 
-	if config.API.Http {
-		go api.HTTPServe(config.API)
+	if g.Config.API.Http {
+		go api.HTTPServe()
 	}
 
 	var c = make(chan os.Signal, 1)
