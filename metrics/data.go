@@ -120,7 +120,7 @@ func (self *MetricData) calcRate(now time.Time) {
 	}
 }
 
-func (self *MetricData) getData() []*model.MetricValue {
+func (self *MetricData) send() {
 	data := []*model.MetricValue{}
 	for k, d := range self.info {
 		if !strings.HasPrefix(k, "mem") {
@@ -131,13 +131,9 @@ func (self *MetricData) getData() []*model.MetricValue {
 	for k, d := range self.rate {
 		data = append(data, self.newMetricValue(k, d))
 	}
-	return data
-}
-
-func (self *MetricData) send(data []*model.MetricValue) {
 	var resp model.TransferResponse
 	if err := self.rpcClient.Call("Transfer.Update", data, &resp); err != nil {
-		logs.Debug("call Transfer.Update fail", err)
+		logs.Debug("Metrics call Transfer.Update fail", err, self.app.Name, self.app.EntryPoint)
 		return
 	}
 	logs.Debug(self.endpoint, self.last, &resp)
@@ -158,32 +154,32 @@ func (self *MetricData) newMetricValue(metric string, value interface{}) *model.
 
 func (self *MetricData) Report() {
 	defer self.close()
-	logs.Info(self.app.Name, "Metrics report start")
-
-	self.last = time.Now()
+	defer logs.Info(self.app.Name, self.app.EntryPoint, "metrics report stop")
 	self.setExec()
 	if !self.updateStats() {
 		return
 	}
+	self.last = time.Now()
 	self.saveLast()
+	logs.Info(self.app.Name, self.app.EntryPoint, "metrics report start")
 	for {
 		select {
-		case now := <-time.After(self.step):
+		case now := <-time.Tick(self.step):
 			if !vaild(self.app.ID) {
 				return
 			}
-			if !self.updateStats() {
-				// veth missing problem
-				continue
-			}
-			self.calcRate(now)
-			self.last = now
-			data := self.getData()
-			go self.send(data)
-			self.saveLast()
+			go func() {
+				if !self.updateStats() {
+					// veth missing problem
+					return
+				}
+				self.calcRate(now)
+				self.last = now
+				go self.send()
+				self.saveLast()
+			}()
 		}
 	}
-	logs.Info(self.app.Name, self.app.EntryPoint, "Metrics report stop")
 }
 
 func (self *MetricData) close() {

@@ -25,9 +25,9 @@ func (this *SingleConnRpcClient) close() {
 	}
 }
 
-func (this *SingleConnRpcClient) insureConn() {
+func (this *SingleConnRpcClient) insureConn() error {
 	if this.rpcClient != nil {
-		return
+		return nil
 	}
 
 	var err error
@@ -35,22 +35,23 @@ func (this *SingleConnRpcClient) insureConn() {
 
 	for {
 		if this.rpcClient != nil {
-			return
+			return nil
 		}
 
 		this.rpcClient, err = net.JsonRpcClient("tcp", this.RpcServer, this.Timeout)
 		if err == nil {
-			return
+			return nil
 		}
 
-		logs.Info("Metrics dial fail", this.RpcServer, err)
-		if retry > 6 {
-			retry = 1
+		logs.Info("Metrics rpc dial fail", this.RpcServer, err)
+		if retry > 5 {
+			return err
 		}
 
 		time.Sleep(time.Duration(math.Pow(2.0, float64(retry))) * time.Second)
 		retry++
 	}
+	return nil
 }
 
 func (this *SingleConnRpcClient) Call(method string, args interface{}, reply interface{}) error {
@@ -58,7 +59,9 @@ func (this *SingleConnRpcClient) Call(method string, args interface{}, reply int
 	this.Lock()
 	defer this.Unlock()
 
-	this.insureConn()
+	if err := this.insureConn(); err != nil {
+		return err
+	}
 
 	timeout := time.Duration(50 * time.Second)
 	done := make(chan error)

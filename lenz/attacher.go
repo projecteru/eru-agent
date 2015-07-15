@@ -54,7 +54,7 @@ func (m *AttachManager) Attach(app *defines.App) {
 		})
 		outwr.Close()
 		errwr.Close()
-		logs.Debug("Lenz Attach:", app.ID, "finished")
+		logs.Debug("Lenz Attach", app.ID, "finished")
 		if err != nil {
 			close(success)
 			failure <- err
@@ -71,10 +71,10 @@ func (m *AttachManager) Attach(app *defines.App) {
 		m.Unlock()
 		success <- struct{}{}
 		m.send(&defines.AttachEvent{Type: "attach", App: app})
-		logs.Debug("Lenz Attach:", app.ID, "success")
+		logs.Debug("Lenz Attach", app.ID, "success")
 		return
 	}
-	logs.Debug("Lenz Attach:", app.ID, "failure:", <-failure)
+	logs.Debug("Lenz Attach", app.ID, "failure:", <-failure)
 }
 
 func (m *AttachManager) send(event *defines.AttachEvent) {
