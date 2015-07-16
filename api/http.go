@@ -20,7 +20,11 @@ func version(req *Request) interface{} {
 }
 
 func list(req *Request) interface{} {
-	return g.Apps
+	ret := JSON{}
+	for ID, EruApp := range g.Apps {
+		ret[ID] = EruApp.Meta
+	}
+	return ret
 }
 
 func addApp(req *Request) interface{} {

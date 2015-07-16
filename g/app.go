@@ -11,7 +11,7 @@ import (
 )
 
 type EruApp struct {
-	App *defines.App
+	Meta *defines.App
 	*defines.Metric
 }
 
@@ -51,7 +51,7 @@ var Apps map[string]*EruApp = map[string]*EruApp{}
 func AddApp(app *EruApp) {
 	lock.Lock()
 	defer lock.Unlock()
-	if _, ok := Apps[app.App.ID]; ok {
+	if _, ok := Apps[app.Meta.ID]; ok {
 		// safe add
 		return
 	}
@@ -60,7 +60,7 @@ func AddApp(app *EruApp) {
 		return
 	}
 	go app.Report()
-	Apps[app.App.ID] = app
+	Apps[app.Meta.ID] = app
 }
 
 func RemoveApp(ID string) {

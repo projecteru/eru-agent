@@ -21,7 +21,7 @@ func (self *EruApp) InitMetric() bool {
 			Cmd: []string{
 				"cat", "/proc/net/dev",
 			},
-			Container: self.App.ID,
+			Container: self.Meta.ID,
 		},
 	); err != nil {
 		logs.Info("Create exec failed", err)
@@ -43,8 +43,8 @@ func (self *EruApp) Exit() {
 
 func (self *EruApp) Report() {
 	defer self.Client.Close()
-	defer logs.Info(self.App.Name, self.App.EntryPoint, "metrics report stop")
-	logs.Info(self.App.Name, self.App.EntryPoint, "metrics report start")
+	defer logs.Info(self.Meta.Name, self.Meta.EntryPoint, "metrics report stop")
+	logs.Info(self.Meta.Name, self.Meta.EntryPoint, "metrics report start")
 	for {
 		select {
 		case now := <-time.Tick(self.Step):
@@ -66,7 +66,7 @@ func (self *EruApp) Report() {
 
 func (self *EruApp) updateStats() bool {
 	statsChan := make(chan *docker.Stats)
-	opt := docker.StatsOptions{self.App.ID, statsChan, false}
+	opt := docker.StatsOptions{self.Meta.ID, statsChan, false}
 	go func() {
 		if err := Docker.Stats(opt); err != nil {
 			logs.Info("Get Stats Failed", err)
@@ -136,7 +136,7 @@ func (self *EruApp) send() {
 	}
 	var resp model.TransferResponse
 	if err := self.Client.Call("Transfer.Update", data, &resp); err != nil {
-		logs.Debug("Metrics call Transfer.Update fail", err, self.App.Name, self.App.EntryPoint)
+		logs.Debug("Metrics call Transfer.Update fail", err, self.Meta.Name, self.Meta.EntryPoint)
 		return
 	}
 	logs.Debug(self.Endpoint, self.Last, &resp)

@@ -59,7 +59,7 @@ func Load() {
 		}
 		if app := g.NewEruApp(container.ID, container.Names[0]); app != nil {
 			g.AddApp(app)
-			lenz.Attacher.Attach(app.App)
+			lenz.Attacher.Attach(app.Meta)
 			reportContainerCure(container.ID)
 		}
 	}
@@ -90,7 +90,7 @@ func monitor() {
 				}
 				if app := g.NewEruApp(event.ID, container.Name); app != nil {
 					g.AddApp(app)
-					lenz.Attacher.Attach(app.App)
+					lenz.Attacher.Attach(app.Meta)
 					reportContainerCure(event.ID)
 					logs.Debug(event.ID, "cured, added in watching list")
 				}

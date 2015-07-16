@@ -104,7 +104,7 @@ func statusWatcher() {
 			}
 			if app := g.NewEruApp(container.ID, container.Name); app != nil {
 				g.AddApp(app)
-				lenz.Attacher.Attach(app.App)
+				lenz.Attacher.Attach(app.Meta)
 			}
 		}
 	}
