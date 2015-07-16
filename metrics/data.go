@@ -165,16 +165,16 @@ func (self *MetricData) Report() {
 	for {
 		select {
 		case now := <-time.Tick(self.step):
-			if !vaild(self.app.ID) {
+			if !g.VaildApp(self.app.ID) {
 				return
 			}
 			go func() {
 				if !self.updateStats() {
-					// veth missing problem
 					return
 				}
 				self.calcRate(now)
 				self.last = now
+				// for safe
 				go self.send()
 				self.saveLast()
 			}()

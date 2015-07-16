@@ -2,11 +2,11 @@ package api
 
 import (
 	"net/http"
+	"runtime/pprof"
 
 	"github.com/HunanTV/eru-agent/common"
 	"github.com/HunanTV/eru-agent/g"
 	"github.com/HunanTV/eru-agent/logs"
-	"github.com/HunanTV/eru-agent/status"
 	"github.com/bmizerany/pat"
 )
 
@@ -16,23 +16,28 @@ func version(req *Request) interface{} {
 	}
 }
 
-func listStatus(req *Request) interface{} {
-	return JSON{
-		"status": status.Apps,
-	}
+func list(req *Request) interface{} {
+	return g.Apps
 }
 
-func addContainer(req *Request) interface{} {
-	return JSON{
-		"status": status.Apps,
+func add(req *Request) interface{} {
+	return g.Apps
+}
+
+func profile(req *Request) interface{} {
+	r := JSON{}
+	for _, p := range pprof.Profiles() {
+		r[p.Name()] = p.Count()
 	}
+	return r
 }
 
 func HTTPServe() {
 	m := pat.New()
+	m.Add("GET", "/profile", http.HandlerFunc(JSONWrapper(profile)))
 	m.Add("GET", "/", http.HandlerFunc(JSONWrapper(version)))
-	m.Add("GET", "/api/status/list", http.HandlerFunc(JSONWrapper(listStatus)))
-	m.Add("PUT", "/api/add", http.HandlerFunc(JSONWrapper(addContainer)))
+	m.Add("GET", "/api/list", http.HandlerFunc(JSONWrapper(list)))
+	m.Add("PUT", "/api/add", http.HandlerFunc(JSONWrapper(add)))
 
 	http.Handle("/", m)
 	logs.Info("API http server start at", g.Config.API.Addr)

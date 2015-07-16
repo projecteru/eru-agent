@@ -16,7 +16,6 @@ import (
 )
 
 var events chan *docker.APIEvents = make(chan *docker.APIEvents)
-var Apps map[string]*defines.App = map[string]*defines.App{}
 
 func InitStatus() {
 	logs.Assert(g.Docker.AddEventListener(events), "Attacher")
@@ -61,20 +60,12 @@ func Load() {
 			continue
 		}
 		if app := defines.NewApp(container.ID, container.Names[0]); app != nil {
-			Add(app)
+			g.AddApp(app)
+			metrics.Start(app)
 			lenz.Attacher.Attach(app)
-			metrics.Add(app)
 			reportContainerCure(container.ID)
 		}
 	}
-}
-
-func Add(app *defines.App) {
-	if _, ok := Apps[app.ID]; ok {
-		// safe add
-		return
-	}
-	Apps[app.ID] = app
 }
 
 func StartMonitor() {
@@ -88,9 +79,8 @@ func monitor() {
 		switch event.Status {
 		case common.STATUS_DIE:
 			// Check if exists
-			if _, ok := Apps[event.ID]; ok {
-				metrics.Remove(event.ID)
-				delete(Apps, event.ID)
+			if g.VaildApp(event.ID) {
+				g.RemoveApp(event.ID)
 				reportContainerDeath(event.ID)
 			}
 		case common.STATUS_START:
@@ -102,9 +92,9 @@ func monitor() {
 					break
 				}
 				if app := defines.NewApp(event.ID, container.Name); app != nil {
-					Add(app)
+					g.AddApp(app)
+					metrics.Start(app)
 					lenz.Attacher.Attach(app)
-					metrics.Add(app)
 					reportContainerCure(event.ID)
 					logs.Debug(event.ID, "cured, added in watching list")
 				}

@@ -11,7 +11,6 @@ import (
 	"github.com/HunanTV/eru-agent/logs"
 	"github.com/HunanTV/eru-agent/metrics"
 	"github.com/HunanTV/eru-agent/network"
-	"github.com/HunanTV/eru-agent/status"
 	"github.com/keimoon/gore"
 )
 
@@ -102,9 +101,9 @@ func statusWatcher() {
 				logs.Info("Status inspect docker failed", err)
 			} else {
 				if app := defines.NewApp(container.ID, container.Name); app != nil {
-					status.Add(app)
+					g.AddApp(app)
+					metrics.Start(app)
 					lenz.Attacher.Attach(app)
-					metrics.Add(app)
 				}
 			}
 		}
