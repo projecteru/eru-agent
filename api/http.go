@@ -1,8 +1,11 @@
 package api
 
 import (
+	"fmt"
 	"net/http"
 	"runtime/pprof"
+
+	_ "net/http/pprof"
 
 	"github.com/HunanTV/eru-agent/common"
 	"github.com/HunanTV/eru-agent/g"
@@ -20,8 +23,11 @@ func list(req *Request) interface{} {
 	return g.Apps
 }
 
-func add(req *Request) interface{} {
-	return g.Apps
+func addApp(req *Request) interface{} {
+	fmt.Println(req.Body)
+	fmt.Println(req.Form)
+	fmt.Println(req.URL.Query())
+	return JSON{}
 }
 
 func profile(req *Request) interface{} {
@@ -37,7 +43,7 @@ func HTTPServe() {
 	m.Add("GET", "/profile", http.HandlerFunc(JSONWrapper(profile)))
 	m.Add("GET", "/", http.HandlerFunc(JSONWrapper(version)))
 	m.Add("GET", "/api/list", http.HandlerFunc(JSONWrapper(list)))
-	m.Add("PUT", "/api/add", http.HandlerFunc(JSONWrapper(add)))
+	m.Add("PUT", "/api/add", http.HandlerFunc(JSONWrapper(addApp)))
 
 	http.Handle("/", m)
 	logs.Info("API http server start at", g.Config.API.Addr)
