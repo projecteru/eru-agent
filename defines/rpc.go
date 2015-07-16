@@ -1,4 +1,4 @@
-package metrics
+package defines
 
 import (
 	"math"
@@ -18,7 +18,7 @@ type SingleConnRpcClient struct {
 	Timeout   time.Duration
 }
 
-func (this *SingleConnRpcClient) close() {
+func (this *SingleConnRpcClient) Close() {
 	if this.rpcClient != nil {
 		this.rpcClient.Close()
 		this.rpcClient = nil
@@ -74,10 +74,10 @@ func (this *SingleConnRpcClient) Call(method string, args interface{}, reply int
 	select {
 	case <-time.After(timeout):
 		logs.Info("Metrics rpc call timeout", this.rpcClient, this.RpcServer)
-		this.close()
+		this.Close()
 	case err := <-done:
 		if err != nil {
-			this.close()
+			this.Close()
 			return err
 		}
 	}

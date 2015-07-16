@@ -10,7 +10,6 @@ import (
 	"github.com/HunanTV/eru-agent/health"
 	"github.com/HunanTV/eru-agent/lenz"
 	"github.com/HunanTV/eru-agent/logs"
-	"github.com/HunanTV/eru-agent/metrics"
 	"github.com/HunanTV/eru-agent/network"
 	"github.com/HunanTV/eru-agent/status"
 	"github.com/HunanTV/eru-agent/utils"
@@ -19,11 +18,11 @@ import (
 func main() {
 	g.LoadConfig()
 	g.InitialConn()
+	g.InitTransfers()
 	defer g.CloseConn()
 
 	lenz.InitLenz()
 	status.InitStatus()
-	metrics.InitMetrics()
 	network.InitVlan()
 
 	utils.WritePid(g.Config.PidFile)
