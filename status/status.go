@@ -75,12 +75,13 @@ func StartMonitor() {
 
 func monitor() {
 	for event := range events {
-		logs.Debug("Status", event.Status, event.ID, event.From)
+		//logs.Debug("Status", event.Status, event.ID, event.From)
 		switch event.Status {
 		case common.STATUS_DIE:
 			// Check if exists
 			if g.VaildApp(event.ID) {
 				g.RemoveApp(event.ID)
+				metrics.Stop(event.ID)
 				reportContainerDeath(event.ID)
 			}
 		case common.STATUS_START:

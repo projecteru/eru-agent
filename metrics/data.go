@@ -18,6 +18,7 @@ type MetricData struct {
 	last      time.Time
 	exec      *docker.Exec
 	step      time.Duration
+	stop      chan bool
 	tag       string
 	endpoint  string
 	rpcClient SingleConnRpcClient
@@ -32,6 +33,7 @@ func NewMetricData(app *defines.App, client SingleConnRpcClient, step time.Durat
 	m.app = app
 	m.rpcClient = client
 	m.step = step
+	m.stop = make(chan bool)
 	m.info = map[string]uint64{}
 	m.save = map[string]uint64{}
 	m.rate = map[string]float64{}
@@ -41,6 +43,10 @@ func NewMetricData(app *defines.App, client SingleConnRpcClient, step time.Durat
 	)
 	m.endpoint = fmt.Sprintf("%s-%s", app.Name, app.EntryPoint)
 	return m
+}
+
+func (self *MetricData) Stop() {
+	self.stop <- true
 }
 
 func (self *MetricData) setExec() (err error) {
@@ -165,9 +171,6 @@ func (self *MetricData) Report() {
 	for {
 		select {
 		case now := <-time.Tick(self.step):
-			if !g.VaildApp(self.app.ID) {
-				return
-			}
 			go func() {
 				if !self.updateStats() {
 					return
@@ -178,6 +181,8 @@ func (self *MetricData) Report() {
 				go self.send()
 				self.saveLast()
 			}()
+		case <-self.stop:
+			return
 		}
 	}
 }
