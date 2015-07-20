@@ -7,6 +7,7 @@ import (
 
 	_ "net/http/pprof"
 
+	"github.com/HunanTV/eru-agent/app"
 	"github.com/HunanTV/eru-agent/common"
 	"github.com/HunanTV/eru-agent/g"
 	"github.com/HunanTV/eru-agent/logs"
@@ -21,7 +22,7 @@ func version(req *Request) interface{} {
 
 func list(req *Request) interface{} {
 	ret := JSON{}
-	for ID, EruApp := range g.Apps {
+	for ID, EruApp := range app.Apps {
 		ret[ID] = EruApp.Meta
 	}
 	return ret

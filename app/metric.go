@@ -1,4 +1,4 @@
-package g
+package app
 
 import (
 	"bufio"
@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/HunanTV/eru-agent/common"
+	"github.com/HunanTV/eru-agent/g"
 	"github.com/HunanTV/eru-agent/logs"
 	"github.com/fsouza/go-dockerclient"
 	"github.com/open-falcon/common/model"
@@ -15,13 +16,13 @@ import (
 
 func (self *EruApp) InitMetric() bool {
 	var err error
-	if self.Exec, err = Docker.CreateExec(
+	if self.Exec, err = g.Docker.CreateExec(
 		docker.CreateExecOptions{
 			AttachStdout: true,
 			Cmd: []string{
 				"cat", "/proc/net/dev",
 			},
-			Container: self.Meta.ID,
+			Container: self.ID,
 		},
 	); err != nil {
 		logs.Info("Create exec failed", err)
@@ -43,8 +44,8 @@ func (self *EruApp) Exit() {
 
 func (self *EruApp) Report() {
 	defer self.Client.Close()
-	defer logs.Info(self.Meta.Name, self.Meta.EntryPoint, "metrics report stop")
-	logs.Info(self.Meta.Name, self.Meta.EntryPoint, "metrics report start")
+	defer logs.Info(self.Name, self.EntryPoint, "metrics report stop")
+	logs.Info(self.Name, self.EntryPoint, "metrics report start")
 	for {
 		select {
 		case now := <-time.Tick(self.Step):
@@ -66,9 +67,9 @@ func (self *EruApp) Report() {
 
 func (self *EruApp) updateStats() bool {
 	statsChan := make(chan *docker.Stats)
-	opt := docker.StatsOptions{self.Meta.ID, statsChan, false}
+	opt := docker.StatsOptions{self.ID, statsChan, false}
 	go func() {
-		if err := Docker.Stats(opt); err != nil {
+		if err := g.Docker.Stats(opt); err != nil {
 			logs.Info("Get Stats Failed", err)
 		}
 	}()
@@ -136,7 +137,7 @@ func (self *EruApp) send() {
 	}
 	var resp model.TransferResponse
 	if err := self.Client.Call("Transfer.Update", data, &resp); err != nil {
-		logs.Debug("Metrics call Transfer.Update fail", err, self.Meta.Name, self.Meta.EntryPoint)
+		logs.Debug("Metrics call Transfer.Update fail", err, self.Name, self.EntryPoint)
 		return
 	}
 	logs.Debug(self.Endpoint, self.Last, &resp)
@@ -163,7 +164,7 @@ func GetNetStats(exec *docker.Exec) (result map[string]uint64, err error) {
 	failure := make(chan error)
 	go func() {
 		// TODO: 防止被err流block, 删掉先, 之后记得补上
-		err = Docker.StartExec(
+		err = g.Docker.StartExec(
 			exec.ID,
 			docker.StartExecOptions{
 				OutputStream: outw,

@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/HunanTV/eru-agent/app"
 	"github.com/HunanTV/eru-agent/common"
 	"github.com/HunanTV/eru-agent/g"
 	"github.com/HunanTV/eru-agent/lenz"
@@ -57,9 +58,9 @@ func Load() {
 			reportContainerDeath(container.ID)
 			continue
 		}
-		if app := g.NewEruApp(container.ID, container.Names[0]); app != nil {
-			g.AddApp(app)
-			lenz.Attacher.Attach(app.Meta)
+		if eruApp := app.NewEruApp(container.ID, container.Names[0]); eruApp != nil {
+			app.Add(eruApp)
+			lenz.Attacher.Attach(&eruApp.Meta)
 			reportContainerCure(container.ID)
 		}
 	}
@@ -76,21 +77,21 @@ func monitor() {
 		switch event.Status {
 		case common.STATUS_DIE:
 			// Check if exists
-			if g.VaildApp(event.ID) {
-				g.RemoveApp(event.ID)
+			if app.Vaild(event.ID) {
+				app.Remove(event.ID)
 				reportContainerDeath(event.ID)
 			}
 		case common.STATUS_START:
 			// if not in watching list, just ignore it
-			if isInWatchingSet(event.ID) && !g.VaildApp(event.ID) {
+			if isInWatchingSet(event.ID) && !app.Vaild(event.ID) {
 				container, err := g.Docker.InspectContainer(event.ID)
 				if err != nil {
 					logs.Info("Status inspect docker failed", err)
 					break
 				}
-				if app := g.NewEruApp(event.ID, container.Name); app != nil {
-					g.AddApp(app)
-					lenz.Attacher.Attach(app.Meta)
+				if eruApp := app.NewEruApp(event.ID, container.Name); eruApp != nil {
+					app.Add(eruApp)
+					lenz.Attacher.Attach(&eruApp.Meta)
 					reportContainerCure(event.ID)
 					logs.Debug(event.ID, "cured, added in watching list")
 				}

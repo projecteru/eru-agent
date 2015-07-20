@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/HunanTV/eru-agent/app"
 	"github.com/HunanTV/eru-agent/common"
 	"github.com/HunanTV/eru-agent/g"
 	"github.com/HunanTV/eru-agent/lenz"
@@ -94,7 +95,7 @@ func statusWatcher() {
 		switch control {
 		case "+":
 			logs.Info("API status watch", containerID)
-			if g.VaildApp(containerID) {
+			if app.Vaild(containerID) {
 				break
 			}
 			container, err := g.Docker.InspectContainer(containerID)
@@ -102,9 +103,9 @@ func statusWatcher() {
 				logs.Info("Status inspect docker failed", err)
 				break
 			}
-			if app := g.NewEruApp(container.ID, container.Name); app != nil {
-				g.AddApp(app)
-				lenz.Attacher.Attach(app.Meta)
+			if eruApp := app.NewEruApp(container.ID, container.Name); eruApp != nil {
+				app.Add(eruApp)
+				lenz.Attacher.Attach(&eruApp.Meta)
 			}
 		}
 	}
