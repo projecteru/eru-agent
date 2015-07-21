@@ -5,5 +5,5 @@ type Meta struct {
 	Name       string
 	EntryPoint string
 	Ident      string
-	Version    string
+	Extend     map[string]interface{}
 }

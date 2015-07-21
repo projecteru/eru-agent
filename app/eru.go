@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -16,7 +17,7 @@ type EruApp struct {
 	defines.Metric
 }
 
-func NewEruApp(ID, containerName string) *EruApp {
+func NewEruApp(ID, containerName string, extend map[string]interface{}) *EruApp {
 	name, entrypoint, ident := utils.GetAppInfo(containerName)
 	if name == "" {
 		logs.Info("Container name invald", containerName)
@@ -30,12 +31,19 @@ func NewEruApp(ID, containerName string) *EruApp {
 		Timeout:   time.Duration(g.Config.Metrics.Timeout) * time.Millisecond,
 	}
 	step := time.Duration(g.Config.Metrics.Step) * time.Second
-	tag := fmt.Sprintf("hostname=%s,cid=%s,ident=%s", g.Config.HostName, ID[:12], ident)
+
+	extend["hostname"] = g.Config.HostName
+	extend["cid"] = ID[:12]
+	extend["ident"] = ident
+	tag := []string{}
+	for k, v := range extend {
+		tag = append(tag, fmt.Sprintf("%s=%v", k, v))
+	}
 	endpoint := fmt.Sprintf("%s-%s", name, entrypoint)
 
 	eruApp := &EruApp{
-		defines.Meta{ID, name, entrypoint, ident, ""},
-		defines.Metric{Step: step, Client: client, Tag: tag, Endpoint: endpoint},
+		defines.Meta{ID, name, entrypoint, ident, extend},
+		defines.Metric{Step: step, Client: client, Tag: strings.Join(tag, ","), Endpoint: endpoint},
 	}
 
 	eruApp.Stop = make(chan bool)

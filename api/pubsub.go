@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -91,19 +92,24 @@ func statusWatcher() {
 		command := string(message.Message)
 		logs.Debug("API status watcher get", command)
 		parser := strings.Split(command, "|")
-		control, containerID := parser[0], parser[1]
+		control, containerID, metaString := parser[0], parser[1], parser[2]
 		switch control {
 		case "+":
-			logs.Info("API status watch", containerID)
 			if app.Vaild(containerID) {
 				break
 			}
+			logs.Info("API status watch", containerID)
 			container, err := g.Docker.InspectContainer(containerID)
 			if err != nil {
-				logs.Info("Status inspect docker failed", err)
+				logs.Info("API status inspect docker failed", err)
 				break
 			}
-			if eruApp := app.NewEruApp(container.ID, container.Name); eruApp != nil {
+			var meta map[string]interface{}
+			if err := json.Unmarshal([]byte(metaString), &meta); err != nil {
+				logs.Info("API status load failed", err)
+				break
+			}
+			if eruApp := app.NewEruApp(container.ID, container.Name, meta); eruApp != nil {
 				app.Add(eruApp)
 				lenz.Attacher.Attach(&eruApp.Meta)
 			}

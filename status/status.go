@@ -1,6 +1,7 @@
 package status
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
@@ -35,30 +36,38 @@ func Load() {
 
 	containersKey := fmt.Sprintf("eru:agent:%s:containers", g.Config.HostName)
 	logs.Debug("Status get targets from", containersKey)
-	rep, err := gore.NewCommand("SMEMBERS", containersKey).Run(conn)
+	rep, err := gore.NewCommand("HGETALL", containersKey).Run(conn)
 	if err != nil {
 		logs.Assert(err, "Status get targets")
 	}
-	targetContainersList := []string{}
-	rep.Slice(&targetContainersList)
-	logs.Debug("Status targets:", targetContainersList)
 
-	targets := map[string]struct{}{}
-	for _, target := range targetContainersList {
-		targets[target] = struct{}{}
+	if rep.IsNil() {
+		return
 	}
 
+	targets, err := rep.Map()
+	if err != nil {
+		logs.Assert(err, "Status load targets")
+	}
+
+	logs.Debug("Status targets:", targets)
 	logs.Info("Status load container")
 	for _, container := range containers {
 		if _, ok := targets[container.ID]; !ok {
 			continue
 		}
+
 		status := getStatus(container.Status)
 		if status != common.STATUS_START {
 			reportContainerDeath(container.ID)
 			continue
 		}
-		if eruApp := app.NewEruApp(container.ID, container.Names[0]); eruApp != nil {
+		var meta map[string]interface{}
+		if err := json.Unmarshal([]byte(targets[container.ID]), &meta); err != nil {
+			logs.Info("Status load failed", err)
+			continue
+		}
+		if eruApp := app.NewEruApp(container.ID, container.Names[0], meta); eruApp != nil {
 			app.Add(eruApp)
 			lenz.Attacher.Attach(&eruApp.Meta)
 			reportContainerCure(container.ID)
@@ -83,13 +92,13 @@ func monitor() {
 			}
 		case common.STATUS_START:
 			// if not in watching list, just ignore it
-			if isInWatchingSet(event.ID) && !app.Vaild(event.ID) {
+			if meta := getContainerMeta(event.ID); meta != nil && !app.Vaild(event.ID) {
 				container, err := g.Docker.InspectContainer(event.ID)
 				if err != nil {
 					logs.Info("Status inspect docker failed", err)
 					break
 				}
-				if eruApp := app.NewEruApp(event.ID, container.Name); eruApp != nil {
+				if eruApp := app.NewEruApp(event.ID, container.Name, meta); eruApp != nil {
 					app.Add(eruApp)
 					lenz.Attacher.Attach(&eruApp.Meta)
 					reportContainerCure(event.ID)
@@ -109,20 +118,30 @@ func getStatus(s string) string {
 	}
 }
 
-func isInWatchingSet(cid string) bool {
+func getContainerMeta(cid string) map[string]interface{} {
 	conn, err := g.Rds.Acquire()
 	if err != nil || conn == nil {
-		logs.Assert(err, "Get redis conn")
+		logs.Info("Status get redis conn", err)
+		return nil
 	}
 	defer g.Rds.Release(conn)
 
 	containersKey := fmt.Sprintf("eru:agent:%s:containers", g.Config.HostName)
-	rep, err := gore.NewCommand("SISMEMBER", containersKey, cid).Run(conn)
+	rep, err := gore.NewCommand("HGET", containersKey, cid).Run(conn)
 	if err != nil {
-		logs.Assert(err, "Get targets")
+		logs.Info("Status get target", err)
+		return nil
 	}
-	repInt, _ := rep.Int()
-	return repInt == 1
+	var result map[string]interface{}
+	if b, err := rep.Bytes(); err != nil {
+		logs.Info("Status get meta", err)
+	} else {
+		if err := json.Unmarshal(b, &result); err != nil {
+			logs.Info("Status get meta", err)
+			return nil
+		}
+	}
+	return result
 }
 
 func reportContainerDeath(cid string) {
