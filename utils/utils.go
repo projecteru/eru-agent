@@ -9,8 +9,8 @@ import (
 	"strconv"
 	"strings"
 
-	"../common"
-	"../logs"
+	"github.com/HunanTV/eru-agent/common"
+	"github.com/HunanTV/eru-agent/logs"
 )
 
 func UrlJoin(strs ...string) string {
@@ -127,4 +127,12 @@ func GetAppInfo(containerName string) (name string, entrypoint string, ident str
 		return "", "", ""
 	}
 	return appinfo[0], appinfo[1], appinfo[2]
+}
+
+func Atoi(s string, def int) int {
+	if r, err := strconv.Atoi(s); err != nil {
+		return def
+	} else {
+		return r
+	}
 }

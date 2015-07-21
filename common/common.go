@@ -6,4 +6,6 @@ const (
 
 	CNAME_NUM   = 3
 	VLAN_PREFIX = "vnbe"
+
+	VERSION = "0.1.2"
 )

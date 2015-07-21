@@ -1,22 +1,29 @@
-package main
+package g
 
 import (
 	"flag"
 	"io/ioutil"
 	"os"
 
-	"./defines"
-	"./logs"
+	"github.com/HunanTV/eru-agent/common"
+	"github.com/HunanTV/eru-agent/defines"
+	"github.com/HunanTV/eru-agent/logs"
 	"gopkg.in/yaml.v2"
 )
 
-var config = defines.AgentConfig{}
+var Config = defines.AgentConfig{}
 
 func LoadConfig() {
 	var configPath string
+	var version bool
 	flag.BoolVar(&logs.Mode, "DEBUG", false, "enable debug")
 	flag.StringVar(&configPath, "c", "agent.yaml", "config file")
+	flag.BoolVar(&version, "v", false, "show version")
 	flag.Parse()
+	if version {
+		logs.Info("Version", common.VERSION)
+		os.Exit(0)
+	}
 	load(configPath)
 }
 
@@ -30,8 +37,8 @@ func load(configPath string) {
 		logs.Assert(err, "Read config file failed")
 	}
 
-	if err := yaml.Unmarshal(b, &config); err != nil {
+	if err := yaml.Unmarshal(b, &Config); err != nil {
 		logs.Assert(err, "Load config file failed")
 	}
-	logs.Debug(config)
+	logs.Debug("Configure:", Config)
 }

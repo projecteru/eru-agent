@@ -4,8 +4,7 @@ import "github.com/CMGS/consistent"
 
 type AttachEvent struct {
 	Type string
-	ID   string
-	App  *App
+	App  *Meta
 }
 
 type Log struct {

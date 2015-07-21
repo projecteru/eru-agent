@@ -1,4 +1,4 @@
-package metrics
+package defines
 
 import (
 	"math"
@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"../logs"
+	"github.com/HunanTV/eru-agent/logs"
 
 	"github.com/toolkits/net"
 )
@@ -18,16 +18,16 @@ type SingleConnRpcClient struct {
 	Timeout   time.Duration
 }
 
-func (this *SingleConnRpcClient) close() {
+func (this *SingleConnRpcClient) Close() {
 	if this.rpcClient != nil {
 		this.rpcClient.Close()
 		this.rpcClient = nil
 	}
 }
 
-func (this *SingleConnRpcClient) insureConn() {
+func (this *SingleConnRpcClient) insureConn() error {
 	if this.rpcClient != nil {
-		return
+		return nil
 	}
 
 	var err error
@@ -35,24 +35,23 @@ func (this *SingleConnRpcClient) insureConn() {
 
 	for {
 		if this.rpcClient != nil {
-			return
+			return nil
 		}
 
 		this.rpcClient, err = net.JsonRpcClient("tcp", this.RpcServer, this.Timeout)
 		if err == nil {
-			return
+			return nil
 		}
 
-		logs.Info("Dial fail", this.RpcServer, err)
-
-		if retry > 6 {
-			retry = 1
+		logs.Info("Metrics rpc dial fail", this.RpcServer, err)
+		if retry > 5 {
+			return err
 		}
 
 		time.Sleep(time.Duration(math.Pow(2.0, float64(retry))) * time.Second)
-
 		retry++
 	}
+	return nil
 }
 
 func (this *SingleConnRpcClient) Call(method string, args interface{}, reply interface{}) error {
@@ -60,7 +59,9 @@ func (this *SingleConnRpcClient) Call(method string, args interface{}, reply int
 	this.Lock()
 	defer this.Unlock()
 
-	this.insureConn()
+	if err := this.insureConn(); err != nil {
+		return err
+	}
 
 	timeout := time.Duration(50 * time.Second)
 	done := make(chan error)
@@ -72,11 +73,11 @@ func (this *SingleConnRpcClient) Call(method string, args interface{}, reply int
 
 	select {
 	case <-time.After(timeout):
-		logs.Info("[WARN] Rpc call timeout", this.rpcClient, this.RpcServer)
-		this.close()
+		logs.Info("Metrics rpc call timeout", this.rpcClient, this.RpcServer)
+		this.Close()
 	case err := <-done:
 		if err != nil {
-			this.close()
+			this.Close()
 			return err
 		}
 	}

@@ -3,7 +3,7 @@ package defines
 import (
 	"reflect"
 
-	"../logs"
+	"github.com/HunanTV/eru-agent/logs"
 	"github.com/fsouza/go-dockerclient"
 )
 

@@ -6,8 +6,8 @@ import (
 	"strings"
 	"sync"
 
-	"../defines"
-	"../logs"
+	"github.com/HunanTV/eru-agent/defines"
+	"github.com/HunanTV/eru-agent/logs"
 	"github.com/fsouza/go-dockerclient"
 )
 
@@ -32,9 +32,9 @@ func (m *AttachManager) Attached(id string) bool {
 	return ok
 }
 
-func (m *AttachManager) Attach(ID string, app *defines.App) {
+func (m *AttachManager) Attach(app *defines.Meta) {
 	// Not Thread Safe
-	if m.Attached(ID) {
+	if m.Attached(app.ID) {
 		return
 	}
 	success := make(chan struct{})
@@ -43,7 +43,7 @@ func (m *AttachManager) Attach(ID string, app *defines.App) {
 	errrd, errwr := io.Pipe()
 	go func() {
 		err := m.client.AttachToContainer(docker.AttachToContainerOptions{
-			Container:    ID,
+			Container:    app.ID,
 			OutputStream: outwr,
 			ErrorStream:  errwr,
 			Stdin:        false,
@@ -54,27 +54,27 @@ func (m *AttachManager) Attach(ID string, app *defines.App) {
 		})
 		outwr.Close()
 		errwr.Close()
-		logs.Debug("Lenz Attach:", ID, "finished")
+		logs.Debug("Lenz Attach", app.ID, "finished")
 		if err != nil {
 			close(success)
 			failure <- err
 		}
-		m.send(&defines.AttachEvent{Type: "detach", ID: ID, App: app})
+		m.send(&defines.AttachEvent{Type: "detach", App: app})
 		m.Lock()
 		defer m.Unlock()
-		delete(m.attached, ID)
+		delete(m.attached, app.ID)
 	}()
 	_, ok := <-success
 	if ok {
 		m.Lock()
-		m.attached[ID] = NewLogPump(outrd, errrd, ID, app)
+		m.attached[app.ID] = NewLogPump(outrd, errrd, app)
 		m.Unlock()
 		success <- struct{}{}
-		m.send(&defines.AttachEvent{Type: "attach", ID: ID, App: app})
-		logs.Debug("Lenz Attach:", ID, "success")
+		m.send(&defines.AttachEvent{Type: "attach", App: app})
+		logs.Debug("Lenz Attach", app.ID, "success")
 		return
 	}
-	logs.Debug("Lenz Attach:", ID, "failure:", <-failure)
+	logs.Debug("Lenz Attach", app.ID, "failure:", <-failure)
 }
 
 func (m *AttachManager) send(event *defines.AttachEvent) {
@@ -91,8 +91,8 @@ func (m *AttachManager) addListener(ch chan *defines.AttachEvent) {
 	defer m.Unlock()
 	m.channels[ch] = struct{}{}
 	go func() {
-		for id, pump := range m.attached {
-			ch <- &defines.AttachEvent{Type: "attach", ID: id, App: pump.app}
+		for _, pump := range m.attached {
+			ch <- &defines.AttachEvent{Type: "attach", App: pump.app}
 		}
 	}()
 }
@@ -120,10 +120,10 @@ func (m *AttachManager) Listen(source *defines.Source, logstream chan *defines.L
 		select {
 		case event := <-events:
 			if event.Type == "attach" && (source.All() ||
-				(source.ID != "" && strings.HasPrefix(event.ID, source.ID)) ||
+				(source.ID != "" && strings.HasPrefix(event.App.ID, source.ID)) ||
 				(source.Name != "" && event.App.Name == source.Name) ||
 				(source.Filter != "" && strings.Contains(event.App.Name, source.Filter))) {
-				pump := m.Get(event.ID)
+				pump := m.Get(event.App.ID)
 				pump.AddListener(logstream)
 				defer func() {
 					if pump != nil {
@@ -131,7 +131,7 @@ func (m *AttachManager) Listen(source *defines.Source, logstream chan *defines.L
 					}
 				}()
 			} else if source.ID != "" && event.Type == "detach" &&
-				strings.HasPrefix(event.ID, source.ID) {
+				strings.HasPrefix(event.App.ID, source.ID) {
 				return
 			}
 		case <-closer:
@@ -142,14 +142,12 @@ func (m *AttachManager) Listen(source *defines.Source, logstream chan *defines.L
 
 type LogPump struct {
 	sync.Mutex
-	ID       string
-	app      *defines.App
+	app      *defines.Meta
 	channels map[chan *defines.Log]struct{}
 }
 
-func NewLogPump(stdout, stderr io.Reader, ID string, app *defines.App) *LogPump {
+func NewLogPump(stdout, stderr io.Reader, app *defines.Meta) *LogPump {
 	obj := &LogPump{
-		ID:       ID,
 		app:      app,
 		channels: make(map[chan *defines.Log]struct{}),
 	}
@@ -159,13 +157,13 @@ func NewLogPump(stdout, stderr io.Reader, ID string, app *defines.App) *LogPump 
 			data, err := buf.ReadBytes('\n')
 			if err != nil {
 				if err != io.EOF {
-					logs.Debug("Lenz Pump:", ID, typ, err)
+					logs.Debug("Lenz Pump:", app.ID, typ, err)
 				}
 				return
 			}
 			obj.send(&defines.Log{
 				Data:       strings.TrimSuffix(string(data), "\n"),
-				ID:         ID,
+				ID:         app.ID,
 				Name:       app.Name,
 				EntryPoint: app.EntryPoint,
 				Ident:      app.Ident,

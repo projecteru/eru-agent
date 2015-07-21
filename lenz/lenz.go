@@ -3,34 +3,29 @@ package lenz
 import (
 	"os"
 
-	"../common"
-	"../defines"
-	"../logs"
+	"github.com/HunanTV/eru-agent/defines"
+	"github.com/HunanTV/eru-agent/g"
+	"github.com/HunanTV/eru-agent/logs"
 )
 
-type LenzForwarder struct {
-	Attacher *AttachManager
-	Router   *RouteManager
-	Routefs  RouteFileStore
-}
+var Attacher *AttachManager
+var Router *RouteManager
+var Routefs RouteFileStore
 
-func NewLenz(config defines.LenzConfig) *LenzForwarder {
-	obj := &LenzForwarder{}
-	obj.Attacher = NewAttachManager(common.Docker)
-	obj.Router = NewRouteManager(obj.Attacher, config.Stdout)
-	obj.Routefs = RouteFileStore(config.Routes)
-
-	if len(config.Forwards) > 0 {
-		logs.Info("Routing all to", config.Forwards)
-		target := defines.Target{Addrs: config.Forwards}
+func InitLenz() {
+	Attacher = NewAttachManager(g.Docker)
+	Router = NewRouteManager(Attacher, g.Config.Lenz.Stdout)
+	Routefs = RouteFileStore(g.Config.Lenz.Routes)
+	if len(g.Config.Lenz.Forwards) > 0 {
+		logs.Debug("Lenz Routing all to", g.Config.Lenz.Forwards)
+		target := defines.Target{Addrs: g.Config.Lenz.Forwards}
 		route := defines.Route{ID: "lenz_default", Target: &target}
 		route.LoadBackends()
-		obj.Router.Add(&route)
+		Router.Add(&route)
 	}
-
-	if _, err := os.Stat(config.Routes); err == nil {
-		logs.Info("Loading and persisting routes in", config.Routes)
-		logs.Assert(obj.Router.Load(obj.Routefs), "persistor")
+	if _, err := os.Stat(g.Config.Lenz.Routes); err == nil {
+		logs.Debug("Loading and persisting routes in", g.Config.Lenz.Routes)
+		logs.Assert(Router.Load(Routefs), "persistor")
 	}
-	return obj
+	logs.Info("Lenz initiated")
 }
