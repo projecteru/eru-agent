@@ -10,8 +10,8 @@ import (
 	"github.com/docker/libcontainer/netlink"
 )
 
-func AddVLan(vethName, ips, ident, containerID string) bool {
-	device, _ := Devices.Get(ident, 0)
+func AddVLan(vethName, ips, containerID string) bool {
+	device, _ := Devices.Get(containerID, 0)
 	logs.Info("Add new VLan to", vethName, containerID)
 
 	if err := netlink.NetworkLinkAddMacVlan(device, vethName, "bridge"); err != nil {

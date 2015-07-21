@@ -55,9 +55,9 @@ func vlanWatcher() {
 			logs.Info("API vlan watcher command invaild", command)
 			continue
 		}
-		taskID, containerID, ident := parser[0], parser[1], parser[2]
+		taskID, containerID := parser[0], parser[1]
 		feedKey := fmt.Sprintf("eru:agent:%s:feedback", taskID)
-		for _, content := range parser[3:] {
+		for _, content := range parser[2:] {
 			p := strings.Split(content, ":")
 			if len(p) != 2 {
 				logs.Info("API vlan watcher command invaild", content)
@@ -65,7 +65,7 @@ func vlanWatcher() {
 			}
 			seq, ips := p[0], p[1]
 			vethName := fmt.Sprintf("%s%s", common.VLAN_PREFIX, seq)
-			if network.AddVLan(vethName, ips, ident, containerID) {
+			if network.AddVLan(vethName, ips, containerID) {
 				gore.NewCommand("LPUSH", feedKey, fmt.Sprintf("1|%s|%s|%s", containerID, vethName, ips)).Run(report)
 				continue
 			}
