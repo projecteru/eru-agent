@@ -128,7 +128,7 @@ func getContainerMeta(cid string) map[string]interface{} {
 
 	containersKey := fmt.Sprintf("eru:agent:%s:containers", g.Config.HostName)
 	rep, err := gore.NewCommand("HGET", containersKey, cid).Run(conn)
-	if err != nil {
+	if err != nil || rep.IsNil() {
 		logs.Info("Status get target", err)
 		return nil
 	}
@@ -153,10 +153,11 @@ func reportContainerDeath(cid string) {
 
 	rep, err := gore.NewCommand("GET", fmt.Sprintf("eru:agent:%s:container:flag", cid)).Run(conn)
 	if err != nil {
-		logs.Assert(err, "failed in GET")
+		logs.Info("Status failed in get flag", err)
+		return
 	}
 	if !rep.IsNil() {
-		logs.Debug(cid, "flag set, ignore")
+		logs.Debug(cid, "Status flag set, ignore")
 		return
 	}
 
