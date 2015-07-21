@@ -34,7 +34,7 @@ func Load() {
 	}
 	defer g.Rds.Release(conn)
 
-	containersKey := fmt.Sprintf("eru:agent:%s:containers", g.Config.HostName)
+	containersKey := fmt.Sprintf("eru:agent:%s:containers:meta", g.Config.HostName)
 	logs.Debug("Status get targets from", containersKey)
 	rep, err := gore.NewCommand("HGETALL", containersKey).Run(conn)
 	if err != nil {
@@ -126,7 +126,7 @@ func getContainerMeta(cid string) map[string]interface{} {
 	}
 	defer g.Rds.Release(conn)
 
-	containersKey := fmt.Sprintf("eru:agent:%s:containers", g.Config.HostName)
+	containersKey := fmt.Sprintf("eru:agent:%s:containers:meta", g.Config.HostName)
 	rep, err := gore.NewCommand("HGET", containersKey, cid).Run(conn)
 	if err != nil || rep.IsNil() {
 		logs.Info("Status get target", err)
