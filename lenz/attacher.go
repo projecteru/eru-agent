@@ -32,7 +32,7 @@ func (m *AttachManager) Attached(id string) bool {
 	return ok
 }
 
-func (m *AttachManager) Attach(app *defines.App) {
+func (m *AttachManager) Attach(app *defines.Meta) {
 	// Not Thread Safe
 	if m.Attached(app.ID) {
 		return
@@ -142,11 +142,11 @@ func (m *AttachManager) Listen(source *defines.Source, logstream chan *defines.L
 
 type LogPump struct {
 	sync.Mutex
-	app      *defines.App
+	app      *defines.Meta
 	channels map[chan *defines.Log]struct{}
 }
 
-func NewLogPump(stdout, stderr io.Reader, app *defines.App) *LogPump {
+func NewLogPump(stdout, stderr io.Reader, app *defines.Meta) *LogPump {
 	obj := &LogPump{
 		app:      app,
 		channels: make(map[chan *defines.Log]struct{}),

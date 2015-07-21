@@ -1,15 +1,15 @@
 package api
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 
+	"github.com/HunanTV/eru-agent/app"
 	"github.com/HunanTV/eru-agent/common"
-	"github.com/HunanTV/eru-agent/defines"
 	"github.com/HunanTV/eru-agent/g"
 	"github.com/HunanTV/eru-agent/lenz"
 	"github.com/HunanTV/eru-agent/logs"
-	"github.com/HunanTV/eru-agent/metrics"
 	"github.com/HunanTV/eru-agent/network"
 	"github.com/keimoon/gore"
 )
@@ -92,19 +92,26 @@ func statusWatcher() {
 		command := string(message.Message)
 		logs.Debug("API status watcher get", command)
 		parser := strings.Split(command, "|")
-		control, containerID := parser[0], parser[1]
+		control, containerID, metaString := parser[0], parser[1], parser[2]
 		switch control {
 		case "+":
+			if app.Vaild(containerID) {
+				break
+			}
 			logs.Info("API status watch", containerID)
 			container, err := g.Docker.InspectContainer(containerID)
 			if err != nil {
-				logs.Info("Status inspect docker failed", err)
-			} else {
-				if app := defines.NewApp(container.ID, container.Name); app != nil {
-					g.AddApp(app)
-					metrics.Start(app)
-					lenz.Attacher.Attach(app)
-				}
+				logs.Info("API status inspect docker failed", err)
+				break
+			}
+			var meta map[string]interface{}
+			if err := json.Unmarshal([]byte(metaString), &meta); err != nil {
+				logs.Info("API status load failed", err)
+				break
+			}
+			if eruApp := app.NewEruApp(container.ID, container.Name, meta); eruApp != nil {
+				app.Add(eruApp)
+				lenz.Attacher.Attach(&eruApp.Meta)
 			}
 		}
 	}
