@@ -56,7 +56,7 @@ func (self *EruApp) Report() {
 				self.calcRate(now)
 				self.Last = now
 				// for safe
-				go self.send()
+				go self.send(self.Info, self.Rate)
 				self.saveLast()
 			}()
 		case <-self.Stop:
@@ -67,7 +67,7 @@ func (self *EruApp) Report() {
 
 func (self *EruApp) updateStats() bool {
 	statsChan := make(chan *docker.Stats)
-	opt := docker.StatsOptions{self.ID, statsChan, false}
+	opt := docker.StatsOptions{self.ID, statsChan, false, nil, time.Duration(2 * time.Second)}
 	go func() {
 		if err := g.Docker.Stats(opt); err != nil {
 			logs.Info("Get Stats Failed", err)
@@ -124,15 +124,15 @@ func (self *EruApp) calcRate(now time.Time) {
 	}
 }
 
-func (self *EruApp) send() {
+func (self *EruApp) send(info map[string]uint64, rate map[string]float64) {
 	data := []*model.MetricValue{}
-	for k, d := range self.Info {
+	for k, d := range info {
 		if !strings.HasPrefix(k, "mem") {
 			continue
 		}
 		data = append(data, self.newMetricValue(k, d))
 	}
-	for k, d := range self.Rate {
+	for k, d := range rate {
 		data = append(data, self.newMetricValue(k, d))
 	}
 	var resp model.TransferResponse
