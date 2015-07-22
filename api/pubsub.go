@@ -64,7 +64,7 @@ func vlanWatcher() {
 				continue
 			}
 			nid, ips := p[0], p[1]
-			vethName := fmt.Sprintf("%s%s.%s", common.VLAN_PREFIX, nid, seq)
+			vethName := fmt.Sprintf("%s%s.%d", common.VLAN_PREFIX, nid, seq)
 			if network.AddVLan(vethName, ips, containerID) {
 				gore.NewCommand("LPUSH", feedKey, fmt.Sprintf("1|%s|%s|%s", containerID, vethName, ips)).Run(report)
 				continue
