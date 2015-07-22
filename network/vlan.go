@@ -1,6 +1,8 @@
 package network
 
 import (
+	"sync"
+
 	"github.com/CMGS/consistent"
 	"github.com/HunanTV/eru-agent/g"
 	"github.com/HunanTV/eru-agent/logs"
@@ -8,6 +10,7 @@ import (
 )
 
 var Devices *consistent.Consistent
+var lock sync.Mutex
 
 func InitVlan() {
 	Devices = consistent.New()

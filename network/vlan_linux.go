@@ -11,6 +11,8 @@ import (
 )
 
 func AddVLan(vethName, ips, containerID string) bool {
+	lock.Lock()
+	defer lock.Unlock()
 	device, _ := Devices.Get(containerID, 0)
 	logs.Info("Add new VLan to", vethName, containerID)
 
