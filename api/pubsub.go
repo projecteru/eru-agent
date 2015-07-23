@@ -69,7 +69,7 @@ func vlanWatcher() {
 				gore.NewCommand("LPUSH", feedKey, fmt.Sprintf("1|%s|%s|%s", containerID, vethName, ips)).Run(report)
 				continue
 			}
-			gore.NewCommand("LPUSH", feedKey, fmt.Sprintf("0|||")).Run(report)
+			gore.NewCommand("LPUSH", feedKey, "0|||").Run(report)
 		}
 	}
 }
