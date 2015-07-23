@@ -82,7 +82,7 @@ func Remove(ID string) {
 	delete(Apps, ID)
 }
 
-func Vaild(ID string) bool {
+func Valid(ID string) bool {
 	lock.RLock()
 	defer lock.RUnlock()
 	_, ok := Apps[ID]
