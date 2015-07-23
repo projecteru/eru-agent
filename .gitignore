@@ -3,3 +3,4 @@ agent
 *.out
 agent.test
 agent.yaml
+eru-agent
