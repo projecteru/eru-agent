@@ -95,7 +95,7 @@ func statusWatcher() {
 		control, containerID, metaString := parser[0], parser[1], parser[2]
 		switch control {
 		case "+":
-			if app.Vaild(containerID) {
+			if app.Valid(containerID) {
 				break
 			}
 			logs.Info("API status watch", containerID)

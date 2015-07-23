@@ -76,7 +76,8 @@ func addVlanForContainer(req *Request) (int, interface{}) {
 	containerID := req.URL.Query().Get(":container_id")
 
 	data := &Data{}
-	err := json.Unmarshal(req.Body, data)
+	decoder := json.NewDecoder(req.Body)
+	err := decoder.Decode(data)
 	if err != nil {
 		return http.StatusBadRequest, JSON{"message": "wrong JSON format"}
 	}
@@ -84,7 +85,7 @@ func addVlanForContainer(req *Request) (int, interface{}) {
 	feedKey := fmt.Sprintf("eru:agent:%s:feedback", data.TaskID)
 	for seq, ip := range data.IPs {
 		vethName := fmt.Sprintf("%s%s.%d", common.VLAN_PREFIX, ip.Nid, seq)
-		if network.AddVlan(vethName, ip.IP, containerID) {
+		if network.AddVLan(vethName, ip.IP, containerID) {
 			gore.NewCommand("LPUSH", feedKey, fmt.Sprintf("1|%s|%s|%s", containerID, vethName, ip.IP)).Run(conn)
 			continue
 		} else {
@@ -103,7 +104,8 @@ func addNewContainer(req *Request) (int, interface{}) {
 	}
 
 	data := &Data{}
-	err := json.Unmarshal(req.Body, data)
+	decoder := json.NewDecoder(req.Body)
+	err := decoder.Decode(data)
 	if err != nil {
 		return http.StatusBadRequest, JSON{"message": "wrong JSON format"}
 	}
@@ -153,6 +155,6 @@ func HTTPServe() {
 	logs.Info("API http server start at", g.Config.API.Addr)
 	err := http.ListenAndServe(g.Config.API.Addr, nil)
 	if err != nil {
-		logs.Assert("ListenAndServe: ", err)
+		logs.Assert(err, "ListenAndServe: ")
 	}
 }

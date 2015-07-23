@@ -86,13 +86,13 @@ func monitor() {
 		switch event.Status {
 		case common.STATUS_DIE:
 			// Check if exists
-			if app.Vaild(event.ID) {
+			if app.Valid(event.ID) {
 				app.Remove(event.ID)
 				reportContainerDeath(event.ID)
 			}
 		case common.STATUS_START:
 			// if not in watching list, just ignore it
-			if meta := getContainerMeta(event.ID); meta != nil && !app.Vaild(event.ID) {
+			if meta := getContainerMeta(event.ID); meta != nil && !app.Valid(event.ID) {
 				container, err := g.Docker.InspectContainer(event.ID)
 				if err != nil {
 					logs.Info("Status inspect docker failed", err)
