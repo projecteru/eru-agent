@@ -54,10 +54,8 @@ func (self *EruApp) Report() {
 					return
 				}
 				self.calcRate(now)
-				self.Last = now
 				// for safe
-				go self.send(self.Info, self.Rate)
-				self.saveLast()
+				go self.send(self.Rate)
 			}()
 		case <-self.Stop:
 			return
@@ -81,6 +79,9 @@ func (self *EruApp) updateStats() bool {
 	self.Info["cpu_user"] = stats.CPUStats.CPUUsage.UsageInUsermode
 	self.Info["cpu_system"] = stats.CPUStats.CPUUsage.UsageInKernelmode
 	self.Info["cpu_usage"] = stats.CPUStats.CPUUsage.TotalUsage
+	for seq, d := range stats.CPUStats.CPUUsage.PercpuUsage {
+		self.Info[fmt.Sprintf("cpu_%d", seq)] = d
+	}
 	self.Info["mem_usage"] = stats.MemoryStats.Usage
 	self.Info["mem_max_usage"] = stats.MemoryStats.MaxUsage
 	self.Info["mem_rss"] = stats.MemoryStats.Stats.Rss
@@ -88,10 +89,9 @@ func (self *EruApp) updateStats() bool {
 	if network, err := GetNetStats(self.Exec); err != nil {
 		logs.Info(err)
 		return false
-	} else {
-		for k, d := range network {
-			self.Info[k] = d
-		}
+	}
+	for k, d := range network {
+		self.Info[k] = d
 	}
 	return true
 }
@@ -106,32 +106,23 @@ func (self *EruApp) saveLast() {
 func (self *EruApp) calcRate(now time.Time) {
 	delta := now.Sub(self.Last)
 	nano_t := float64(delta.Nanoseconds())
-	if self.Info["cpu_user"] > self.Save["cpu_user"] {
-		self.Rate["cpu_user_rate"] = float64(self.Info["cpu_user"]-self.Save["cpu_user"]) / nano_t
-	}
-	if self.Info["cpu_system"] > self.Save["cpu_system"] {
-		self.Rate["cpu_system_rate"] = float64(self.Info["cpu_system"]-self.Save["cpu_system"]) / nano_t
-	}
-	if self.Info["cpu_usage"] > self.Save["cpu_usage"] {
-		self.Rate["cpu_usage_rate"] = float64(self.Info["cpu_usage"]-self.Save["cpu_usage"]) / nano_t
-	}
 	second_t := delta.Seconds()
 	for k, d := range self.Info {
-		if !strings.HasPrefix(k, common.VLAN_PREFIX) || d < self.Save[k] {
-			continue
+		switch k {
+		case strings.HasPrefix(k, "cpu_") && d > self.Save[k]:
+			self.Rate[fmt.Sprintf("%s_rate", k)] = float64(d-self.Save[k]) / nano_t
+		case strings.HasPrefix(k, common.VLAN_PREFIX) && d > self.Save[k]:
+			self.Rate[fmt.Sprintf("%s.rate", k)] = float64(d-self.Save[k]) / second_t
+		case strings.HasPrefix(k, "mem"):
+			self.Rate[k] = d
 		}
-		self.Rate[k+".rate"] = float64(d-self.Save[k]) / second_t
 	}
+	self.Last = now
+	self.saveLast()
 }
 
-func (self *EruApp) send(info map[string]uint64, rate map[string]float64) {
+func (self *EruApp) send(rate map[string]float64) {
 	data := []*model.MetricValue{}
-	for k, d := range info {
-		if !strings.HasPrefix(k, "mem") {
-			continue
-		}
-		data = append(data, self.newMetricValue(k, d))
-	}
 	for k, d := range rate {
 		data = append(data, self.newMetricValue(k, d))
 	}
