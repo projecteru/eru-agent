@@ -79,9 +79,10 @@ func (self *EruApp) updateStats() bool {
 	self.Info["cpu_user"] = stats.CPUStats.CPUUsage.UsageInUsermode
 	self.Info["cpu_system"] = stats.CPUStats.CPUUsage.UsageInKernelmode
 	self.Info["cpu_usage"] = stats.CPUStats.CPUUsage.TotalUsage
-	for seq, d := range stats.CPUStats.CPUUsage.PercpuUsage {
-		self.Info[fmt.Sprintf("cpu_%d", seq)] = d
-	}
+	//FIXME in container it will get all CPUStats
+	//	for seq, d := range stats.CPUStats.CPUUsage.PercpuUsage {
+	//		self.Info[fmt.Sprintf("cpu_%d", seq)] = d
+	//	}
 	self.Info["mem_usage"] = stats.MemoryStats.Usage
 	self.Info["mem_max_usage"] = stats.MemoryStats.MaxUsage
 	self.Info["mem_rss"] = stats.MemoryStats.Stats.Rss
