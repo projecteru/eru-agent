@@ -86,7 +86,8 @@ func (self *EruApp) updateStats() bool {
 	self.Info["mem_max_usage"] = stats.MemoryStats.MaxUsage
 	self.Info["mem_rss"] = stats.MemoryStats.Stats.Rss
 
-	if network, err := GetNetStats(self.Exec); err != nil {
+	network, err := GetNetStats(self.Exec)
+	if err != nil {
 		logs.Info(err)
 		return false
 	}
@@ -108,13 +109,13 @@ func (self *EruApp) calcRate(now time.Time) {
 	nano_t := float64(delta.Nanoseconds())
 	second_t := delta.Seconds()
 	for k, d := range self.Info {
-		switch k {
+		switch {
 		case strings.HasPrefix(k, "cpu_") && d > self.Save[k]:
 			self.Rate[fmt.Sprintf("%s_rate", k)] = float64(d-self.Save[k]) / nano_t
 		case strings.HasPrefix(k, common.VLAN_PREFIX) && d > self.Save[k]:
 			self.Rate[fmt.Sprintf("%s.rate", k)] = float64(d-self.Save[k]) / second_t
 		case strings.HasPrefix(k, "mem"):
-			self.Rate[k] = d
+			self.Rate[k] = float64(d)
 		}
 	}
 	self.Last = now
