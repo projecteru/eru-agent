@@ -82,7 +82,7 @@ func StartMonitor() {
 
 func monitor() {
 	for event := range events {
-		//logs.Debug("Status", event.Status, event.ID, event.From)
+		logs.Debug("Status", event.Status, event.ID, event.From)
 		switch event.Status {
 		case common.STATUS_DIE:
 			// Check if exists
@@ -98,12 +98,15 @@ func monitor() {
 					logs.Info("Status inspect docker failed", err)
 					break
 				}
-				if eruApp := app.NewEruApp(event.ID, container.Name, meta); eruApp != nil {
-					app.Add(eruApp)
-					lenz.Attacher.Attach(&eruApp.Meta)
-					reportContainerCure(event.ID)
-					logs.Debug(event.ID, "cured, added in watching list")
+				eruApp := app.NewEruApp(event.ID, container.Name, meta)
+				if eruApp == nil {
+					logs.Info("Create EruApp failed")
+					break
 				}
+				app.Add(eruApp)
+				lenz.Attacher.Attach(&eruApp.Meta)
+				reportContainerCure(event.ID)
+				logs.Debug(event.ID, "cured, added in watching list")
 			}
 		}
 	}
