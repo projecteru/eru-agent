@@ -154,12 +154,14 @@ func reportContainerDeath(cid string) {
 	}
 	defer g.Rds.Release(conn)
 
-	rep, err := gore.NewCommand("GET", fmt.Sprintf("eru:agent:%s:container:flag", cid)).Run(conn)
+	flagKey := fmt.Sprintf("eru:agent:%s:container:flag", cid)
+	rep, err := gore.NewCommand("GET", flagKey).Run(conn)
 	if err != nil {
 		logs.Info("Status failed in get flag", err)
 		return
 	}
 	if !rep.IsNil() {
+		gore.NewCommand("DEL", flagKey).Run(conn)
 		logs.Debug(cid, "Status flag set, ignore")
 		return
 	}
