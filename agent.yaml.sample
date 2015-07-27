@@ -10,6 +10,7 @@ docker:
   key: key.pem
   ca: ca.pem
   health: 30
+  memlimit: 17179869184
 
 lenz:
   forwards:

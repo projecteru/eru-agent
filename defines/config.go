@@ -6,6 +6,7 @@ type DockerConfig struct {
 	Key      string
 	Cert     string
 	Health   int
+	Memlimit float64
 }
 
 type EruConfig struct {
