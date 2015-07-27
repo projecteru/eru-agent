@@ -51,9 +51,11 @@ func (self *EruApp) Report() {
 		case now := <-time.Tick(self.Step):
 			go func() {
 				if !self.updateStats() {
+					limitChan <- SoftLimit{false, self.ID, 0.0}
 					return
 				}
 				self.calcRate(now)
+				limitChan <- SoftLimit{true, self.ID, self.Rate["mem_usage"]}
 				// for safe
 				go self.send(self.Rate)
 			}()
