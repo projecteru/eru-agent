@@ -1,8 +1,12 @@
 package app
 
 import (
+	"fmt"
+
+	"github.com/HunanTV/eru-agent/common"
 	"github.com/HunanTV/eru-agent/g"
 	"github.com/HunanTV/eru-agent/logs"
+	"github.com/keimoon/gore"
 )
 
 type SoftLimit struct {
@@ -91,7 +95,18 @@ func judgeMemoryUsage() {
 }
 
 func softOOMKill(cid string, rate float64) {
-	logs.Info("OOM killed", cid[:12])
+	logs.Debug("OOM killed", cid[:12])
+	conn, err := g.Rds.Acquire()
+	if err != nil || conn == nil {
+		logs.Assert(err, "Get redis conn")
+	}
+	defer g.Rds.Release(conn)
+
+	key := fmt.Sprintf("eru:agent:%s:container:reason", cid)
+	_, err = gore.NewCommand("SET", key, common.OOM_KILLED).Run(conn)
+	if err != nil {
+		logs.Info("OOM killed set flag", err)
+	}
 	if err := g.Docker.StopContainer(cid, 10); err != nil {
 		logs.Info("OOM killed failed", cid[:12])
 		return
