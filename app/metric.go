@@ -50,7 +50,9 @@ func (self *EruApp) Report() {
 		case now := <-time.Tick(self.Step):
 			go func() {
 				upOk := self.updateStats()
-				limitChan <- SoftLimit{upOk, self.ID, self.Info}
+				if isLimit {
+					limitChan <- SoftLimit{upOk, self.ID, self.Info}
+				}
 				if !upOk {
 					return
 				}

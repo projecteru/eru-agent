@@ -13,10 +13,12 @@ type SoftLimit struct {
 
 var limitChan chan SoftLimit = make(chan SoftLimit)
 var usage map[string]uint64 = make(map[string]uint64)
+var isLimit bool = false
 
 func Limit() {
 	if g.Config.Limit.Memory != 0 {
 		logs.Info("App memory soft limit start")
+		isLimit = true
 		go calcMemoryUsage()
 	}
 }
