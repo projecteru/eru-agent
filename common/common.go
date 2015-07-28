@@ -8,4 +8,6 @@ const (
 	VLAN_PREFIX = "vnbe"
 
 	VERSION = "0.1.3"
+
+	OOM_KILLED = 1
 )
