@@ -28,8 +28,7 @@ func (self *EruApp) InitMetric() bool {
 		logs.Info("Create exec failed", err)
 		return false
 	}
-
-	logs.Debug("Create exec id", self.Exec.ID)
+	logs.Debug("Create exec id", self.Exec.ID[:12])
 	if !self.updateStats() {
 		return false
 	}
@@ -50,7 +49,11 @@ func (self *EruApp) Report() {
 		select {
 		case now := <-time.Tick(self.Step):
 			go func() {
-				if !self.updateStats() {
+				upOk := self.updateStats()
+				if isLimit {
+					limitChan <- SoftLimit{upOk, self.ID, self.Info}
+				}
+				if !upOk {
 					return
 				}
 				self.calcRate(now)

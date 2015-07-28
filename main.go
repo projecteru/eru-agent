@@ -6,6 +6,7 @@ import (
 	"syscall"
 
 	"github.com/HunanTV/eru-agent/api"
+	"github.com/HunanTV/eru-agent/app"
 	"github.com/HunanTV/eru-agent/g"
 	"github.com/HunanTV/eru-agent/health"
 	"github.com/HunanTV/eru-agent/lenz"
@@ -32,6 +33,7 @@ func main() {
 	status.Load()
 	status.StartMonitor()
 	health.Check()
+	app.Limit()
 
 	var c = make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)

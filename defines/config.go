@@ -41,6 +41,10 @@ type APIConfig struct {
 	Addr   string
 }
 
+type LimitConfig struct {
+	Memory uint64
+}
+
 type AgentConfig struct {
 	HostName string `yaml:"hostname"`
 	PidFile  string
@@ -52,4 +56,5 @@ type AgentConfig struct {
 	VLan    VLanConfig
 	Redis   RedisConfig
 	API     APIConfig
+	Limit   LimitConfig
 }
