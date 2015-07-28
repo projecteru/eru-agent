@@ -4,6 +4,9 @@ pidfile: /mnt/sda1/tmp/agent.pid
 eru:
   endpoint: http://localhost:5000
 
+limit:
+  memory: 5293824
+
 docker:
   endpoint: tcp://192.168.59.103:2376
   cert: cert.pem

@@ -98,7 +98,7 @@ func statusWatcher() {
 			if app.Valid(containerID) {
 				break
 			}
-			logs.Info("API status watch", containerID)
+			logs.Info("API status watch", containerID[:12])
 			container, err := g.Docker.InspectContainer(containerID)
 			if err != nil {
 				logs.Info("API status inspect docker failed", err)

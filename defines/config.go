@@ -6,7 +6,6 @@ type DockerConfig struct {
 	Key      string
 	Cert     string
 	Health   int
-	Memlimit float64
 }
 
 type EruConfig struct {
@@ -42,6 +41,10 @@ type APIConfig struct {
 	Addr   string
 }
 
+type LimitConfig struct {
+	Memory uint64
+}
+
 type AgentConfig struct {
 	HostName string `yaml:"hostname"`
 	PidFile  string
@@ -53,4 +56,5 @@ type AgentConfig struct {
 	VLan    VLanConfig
 	Redis   RedisConfig
 	API     APIConfig
+	Limit   LimitConfig
 }
