@@ -106,7 +106,6 @@ func monitor() {
 				app.Add(eruApp)
 				lenz.Attacher.Attach(&eruApp.Meta)
 				reportContainerCure(event.ID)
-				logs.Debug(event.ID, "cured, added in watching list")
 			}
 		}
 	}
@@ -131,16 +130,17 @@ func getContainerMeta(cid string) map[string]interface{} {
 
 	containersKey := fmt.Sprintf("eru:agent:%s:containers:meta", g.Config.HostName)
 	rep, err := gore.NewCommand("HGET", containersKey, cid).Run(conn)
-	if err != nil || rep.IsNil() {
-		logs.Info("Status get target", err)
+	if err != nil {
+		logs.Info("Status get meta", err)
 		return nil
 	}
 	var result map[string]interface{}
 	if b, err := rep.Bytes(); err != nil {
 		logs.Info("Status get meta", err)
+		return nil
 	} else {
 		if err := json.Unmarshal(b, &result); err != nil {
-			logs.Info("Status get meta", err)
+			logs.Info("Status unmarshal meta", err)
 			return nil
 		}
 	}
@@ -170,6 +170,7 @@ func reportContainerDeath(cid string) {
 	client := &http.Client{}
 	req, _ := http.NewRequest("PUT", url, nil)
 	client.Do(req)
+	logs.Debug(cid[:12], "dead, remove from watching list")
 }
 
 func reportContainerCure(cid string) {
@@ -177,4 +178,5 @@ func reportContainerCure(cid string) {
 	client := &http.Client{}
 	req, _ := http.NewRequest("PUT", url, nil)
 	client.Do(req)
+	logs.Debug(cid[:12], "cured, added in watching list")
 }
