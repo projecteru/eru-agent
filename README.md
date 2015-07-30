@@ -36,7 +36,7 @@ PUBLISH eru:agent:127.0.0.1:watcher '+|889c8eb8d6d45aa1cfbe36ebe30933bea22be8c89
 3. Set Default Route
 
 ```
-PUBLISH eru:agent:127.0.0.1:route 889c8eb8d6d45aa1cfbe36ebe30933bea22be8c890173b425b3378a966e1bfe5|172.42.1.1'
+PUBLISH eru:agent:127.0.0.1:route 889c8eb8d6d45aa1cfbe36ebe30933bea22be8c890173b425b3378a966e1bfe5|172.42.1.1
 ```
 
 ### HTTP
