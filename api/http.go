@@ -73,7 +73,7 @@ func addVlanForContainer(req *Request) (int, interface{}) {
 	conn := getRedisConn()
 	defer g.Rds.Release(conn)
 
-	containerID := req.URL.Query().Get(":container_id")
+	cid := req.URL.Query().Get(":container_id")
 
 	data := &Data{}
 	decoder := json.NewDecoder(req.Body)
@@ -85,8 +85,8 @@ func addVlanForContainer(req *Request) (int, interface{}) {
 	feedKey := fmt.Sprintf("eru:agent:%s:feedback", data.TaskID)
 	for seq, ip := range data.IPs {
 		vethName := fmt.Sprintf("%s%s.%d", common.VLAN_PREFIX, ip.Nid, seq)
-		if network.AddVLan(vethName, ip.IP, containerID) {
-			gore.NewCommand("LPUSH", feedKey, fmt.Sprintf("1|%s|%s|%s", containerID, vethName, ip.IP)).Run(conn)
+		if network.AddVLan(vethName, ip.IP, cid) {
+			gore.NewCommand("LPUSH", feedKey, fmt.Sprintf("1|%s|%s|%s", cid, vethName, ip.IP)).Run(conn)
 			continue
 		} else {
 			gore.NewCommand("LPUSH", feedKey, "0|||").Run(conn)
