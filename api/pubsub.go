@@ -17,6 +17,7 @@ import (
 func PubSubServe() {
 	go statusWatcher()
 	go vlanWatcher()
+	go routeWatcher()
 }
 
 func getRdsConn() *gore.Conn {
@@ -55,7 +56,7 @@ func vlanWatcher() {
 			logs.Info("API vlan watcher command invaild", command)
 			continue
 		}
-		taskID, containerID := parser[0], parser[1]
+		taskID, cid := parser[0], parser[1]
 		feedKey := fmt.Sprintf("eru:agent:%s:feedback", taskID)
 		for seq, content := range parser[2:] {
 			p := strings.Split(content, ":")
@@ -65,11 +66,40 @@ func vlanWatcher() {
 			}
 			nid, ips := p[0], p[1]
 			vethName := fmt.Sprintf("%s%s.%d", common.VLAN_PREFIX, nid, seq)
-			if network.AddVLan(vethName, ips, containerID) {
-				gore.NewCommand("LPUSH", feedKey, fmt.Sprintf("1|%s|%s|%s", containerID, vethName, ips)).Run(report)
+			if network.AddVLan(vethName, ips, cid) {
+				gore.NewCommand("LPUSH", feedKey, fmt.Sprintf("1|%s|%s|%s", cid, vethName, ips)).Run(report)
 				continue
 			}
 			gore.NewCommand("LPUSH", feedKey, "0|||").Run(report)
+		}
+	}
+}
+
+func routeWatcher() {
+	conn := getRdsConn()
+	defer releaseConn(conn)
+
+	subs := gore.NewSubscriptions(conn)
+	defer subs.Close()
+	subKey := fmt.Sprintf("eru:agent:%s:route", g.Config.HostName)
+	logs.Debug("API route subscribe", subKey)
+	subs.Subscribe(subKey)
+
+	for message := range subs.Message() {
+		if message == nil {
+			logs.Info("API route watcher shutdown")
+			break
+		}
+		command := string(message.Message)
+		logs.Debug("API route watcher get", command)
+		parser := strings.Split(command, "|")
+		if len(parser) != 2 {
+			logs.Info("API route watcher command invaild", command)
+			continue
+		}
+		cid, gateway := parser[0], parser[1]
+		if !network.SetDefaultRoute(cid, gateway) {
+			logs.Info("Set default route failed")
 		}
 	}
 }
@@ -92,14 +122,18 @@ func statusWatcher() {
 		command := string(message.Message)
 		logs.Debug("API status watcher get", command)
 		parser := strings.Split(command, "|")
-		control, containerID, metaString := parser[0], parser[1], parser[2]
+		if len(parser) != 3 {
+			logs.Info("API status watcher command invaild", command)
+			continue
+		}
+		control, cid, metaString := parser[0], parser[1], parser[2]
 		switch control {
 		case "+":
-			if app.Valid(containerID) {
+			if app.Valid(cid) {
 				break
 			}
-			logs.Info("API status watch", containerID[:12])
-			container, err := g.Docker.InspectContainer(containerID)
+			logs.Info("API status watch", cid[:12])
+			container, err := g.Docker.InspectContainer(cid)
 			if err != nil {
 				logs.Info("API status inspect docker failed", err)
 				break
