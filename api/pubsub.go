@@ -17,6 +17,7 @@ import (
 func PubSubServe() {
 	go statusWatcher()
 	go vlanWatcher()
+	go routeWatcher()
 }
 
 func getRdsConn() *gore.Conn {
