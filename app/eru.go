@@ -20,7 +20,7 @@ type EruApp struct {
 func NewEruApp(ID, containerName string, extend map[string]interface{}) *EruApp {
 	name, entrypoint, ident := utils.GetAppInfo(containerName)
 	if name == "" {
-		logs.Info("Container name invald", containerName)
+		logs.Info("Container name invaild", containerName)
 		return nil
 	}
 	logs.Debug("Eru App", name, entrypoint, ident)

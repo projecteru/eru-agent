@@ -123,10 +123,11 @@ func Unmarshal(input io.ReadCloser, obj interface{}) error {
 func GetAppInfo(containerName string) (name string, entrypoint string, ident string) {
 	containerName = strings.TrimLeft(containerName, "/")
 	appinfo := strings.Split(containerName, "_")
-	if len(appinfo) != common.CNAME_NUM {
+	if len(appinfo) < common.CNAME_NUM {
 		return "", "", ""
 	}
-	return appinfo[0], appinfo[1], appinfo[2]
+	l := len(appinfo)
+	return strings.Join(appinfo[:l-2], "_"), appinfo[l-2], appinfo[l-1]
 }
 
 func Atoi(s string, def int) int {

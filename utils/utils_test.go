@@ -18,6 +18,17 @@ func Test_GetAppInfo(t *testing.T) {
 	if ident != "abc" {
 		t.Error("Get ident failed")
 	}
+	containerName = "eru_test_flask_1234_abc"
+	appname, entrypoint, ident = GetAppInfo(containerName)
+	if appname != "eru_test_flask" {
+		t.Error("Get appname failed")
+	}
+	if entrypoint != "1234" {
+		t.Error("Get entrypoint failed")
+	}
+	if ident != "abc" {
+		t.Error("Get ident failed")
+	}
 }
 
 func Test_UrlJoin(t *testing.T) {
