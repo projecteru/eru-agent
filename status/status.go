@@ -135,6 +135,9 @@ func getContainerMeta(cid string) map[string]interface{} {
 		return nil
 	}
 	var result map[string]interface{}
+	if rep.IsNil() {
+		return nil
+	}
 	if b, err := rep.Bytes(); err != nil {
 		logs.Info("Status get meta", err)
 		return nil

@@ -3,28 +3,26 @@ package network
 import (
 	"net"
 	"os/exec"
-	"strconv"
 
 	"github.com/HunanTV/eru-agent/g"
 	"github.com/HunanTV/eru-agent/logs"
 	"github.com/docker/libcontainer/netlink"
 )
 
-func AddVLan(vethName, ips, containerID string) bool {
+func AddVLan(vethName, ips, cid string) bool {
 	lock.Lock()
 	defer lock.Unlock()
-	device, _ := Devices.Get(containerID, 0)
-	logs.Info("Add new VLan to", vethName, containerID)
+	device, _ := Devices.Get(cid, 0)
+	logs.Info("Add new VLan to", vethName, cid)
 
-	if err := netlink.NetworkLinkAddMacVlan(device, vethName, "bridge"); err != nil {
-		logs.Info("Create macvlan device failed", err)
+	container, err := g.Docker.InspectContainer(cid)
+	if err != nil {
+		logs.Info("VLanSetter inspect docker failed", err)
 		return false
 	}
 
-	container, err := g.Docker.InspectContainer(containerID)
-	if err != nil {
-		logs.Info("VLanSetter inspect docker failed", err)
-		delVLan(vethName)
+	if err := netlink.NetworkLinkAddMacVlan(device, vethName, "bridge"); err != nil {
+		logs.Info("Create macvlan device failed", err)
 		return false
 	}
 
@@ -35,17 +33,43 @@ func AddVLan(vethName, ips, containerID string) bool {
 		return false
 	}
 
-	pid := strconv.Itoa(container.State.Pid)
-	cmd := exec.Command("nsenter", "-t", pid, "-n", "ip", "addr", "add", ips, "dev", vethName)
+	cmd := exec.Command("nsenter", "-t", container.State.Pid, "-n", "ip", "addr", "add", ips, "dev", vethName)
 	if err := cmd.Run(); err != nil {
 		logs.Info("Bind ip in container failed", err)
 		return false
 	}
-	cmd = exec.Command("nsenter", "-t", pid, "-n", "ip", "link", "set", vethName, "up")
+	cmd = exec.Command("nsenter", "-t", container.State.Pid, "-n", "ip", "link", "set", vethName, "up")
 	if err := cmd.Run(); err != nil {
 		logs.Info("Set up veth in container failed", err)
 		return false
 	}
-	logs.Info("Add VLAN device success", containerID)
+	logs.Info("Add VLAN device success", cid)
+	return true
+}
+
+func SetDefaultRoute(cid, gateway string) bool {
+	lock.Lock()
+	defer lock.Unlock()
+	logs.Info("Set", cid[:12], "default route", gateway)
+
+	container, err := g.Docker.InspectContainer(cid)
+	if err != nil {
+		logs.Info("RouteSetter inspect docker failed", err)
+		return false
+	}
+
+	cmd := exec.Command("nsenter", "-t", container.State.Pid, "-n", "route", "del", "default")
+	if err := cmd.Run(); err != nil {
+		logs.Info("Clean default route failed", err)
+		return false
+	}
+
+	cmd := exec.Command("nsenter", "-t", container.State.Pid, "-n", "route", "add", "default", "gw", gateway)
+	if err := cmd.Run(); err != nil {
+		logs.Info("RouteSetter set default route failed", err)
+		return false
+	}
+
+	logs.Info("Set default route success", cid, gateway)
 	return true
 }
