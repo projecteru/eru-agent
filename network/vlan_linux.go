@@ -3,6 +3,7 @@ package network
 import (
 	"net"
 	"os/exec"
+	"strconv"
 
 	"github.com/HunanTV/eru-agent/g"
 	"github.com/HunanTV/eru-agent/logs"
@@ -26,6 +27,7 @@ func AddVLan(vethName, ips, cid string) bool {
 		return false
 	}
 
+	pid := strconv.Itoa(container.State.Pid)
 	ifc, _ := net.InterfaceByName(vethName)
 	if err := netlink.NetworkSetNsPid(ifc, container.State.Pid); err != nil {
 		logs.Info("Set macvlan device into container failed", err)
@@ -33,12 +35,12 @@ func AddVLan(vethName, ips, cid string) bool {
 		return false
 	}
 
-	cmd := exec.Command("nsenter", "-t", container.State.Pid, "-n", "ip", "addr", "add", ips, "dev", vethName)
+	cmd := exec.Command("nsenter", "-t", pid, "-n", "ip", "addr", "add", ips, "dev", vethName)
 	if err := cmd.Run(); err != nil {
 		logs.Info("Bind ip in container failed", err)
 		return false
 	}
-	cmd = exec.Command("nsenter", "-t", container.State.Pid, "-n", "ip", "link", "set", vethName, "up")
+	cmd = exec.Command("nsenter", "-t", pid, "-n", "ip", "link", "set", vethName, "up")
 	if err := cmd.Run(); err != nil {
 		logs.Info("Set up veth in container failed", err)
 		return false
@@ -58,13 +60,14 @@ func SetDefaultRoute(cid, gateway string) bool {
 		return false
 	}
 
-	cmd := exec.Command("nsenter", "-t", container.State.Pid, "-n", "route", "del", "default")
+	pid := strconv.Itoa(container.State.Pid)
+	cmd := exec.Command("nsenter", "-t", pid, "-n", "route", "del", "default")
 	if err := cmd.Run(); err != nil {
 		logs.Info("Clean default route failed", err)
 		return false
 	}
 
-	cmd := exec.Command("nsenter", "-t", container.State.Pid, "-n", "route", "add", "default", "gw", gateway)
+	cmd = exec.Command("nsenter", "-t", pid, "-n", "route", "add", "default", "gw", gateway)
 	if err := cmd.Run(); err != nil {
 		logs.Info("RouteSetter set default route failed", err)
 		return false
