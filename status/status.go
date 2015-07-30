@@ -165,7 +165,7 @@ func reportContainerDeath(cid string) {
 	}
 	if !rep.IsNil() {
 		gore.NewCommand("DEL", flagKey).Run(conn)
-		logs.Debug(cid, "Status flag set, ignore")
+		logs.Debug(cid[:12], "Status flag set, ignore")
 		return
 	}
 

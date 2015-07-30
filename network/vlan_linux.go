@@ -73,6 +73,6 @@ func SetDefaultRoute(cid, gateway string) bool {
 		return false
 	}
 
-	logs.Info("Set default route success", cid, gateway)
+	logs.Info("Set default route success", cid[:12], gateway)
 	return true
 }
