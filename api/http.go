@@ -18,16 +18,6 @@ import (
 	"github.com/keimoon/gore"
 )
 
-// 给跪了
-// TODO 之后把这个给抽出去吧
-func getRedisConn() *gore.Conn {
-	conn, err := g.Rds.Acquire()
-	if err != nil || conn == nil {
-		logs.Assert(err, "Get redis conn")
-	}
-	return conn
-}
-
 // URL /api/version/
 func version(req *Request) (int, interface{}) {
 	return http.StatusOK, JSON{"version": common.VERSION}
@@ -70,7 +60,7 @@ func addVlanForContainer(req *Request) (int, interface{}) {
 		IPs    []IP `json: "ips"`
 	}
 
-	conn := getRedisConn()
+	conn := g.GetRedisConn()
 	defer g.Rds.Release(conn)
 
 	cid := req.URL.Query().Get(":container_id")

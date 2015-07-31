@@ -28,12 +28,8 @@ func Load() {
 		logs.Assert(err, "List containers")
 	}
 
-	conn, err := g.Rds.Acquire()
-	if err != nil || conn == nil {
-		logs.Assert(err, "Get redis conn")
-	}
-	defer g.Rds.Release(conn)
-
+	conn := g.GetRedisConn()
+	defer g.ReleaseRedisConn(conn)
 	containersKey := fmt.Sprintf("eru:agent:%s:containers:meta", g.Config.HostName)
 	logs.Debug("Status get targets from", containersKey)
 	rep, err := gore.NewCommand("HGETALL", containersKey).Run(conn)
@@ -121,12 +117,8 @@ func getStatus(s string) string {
 }
 
 func getContainerMeta(cid string) map[string]interface{} {
-	conn, err := g.Rds.Acquire()
-	if err != nil || conn == nil {
-		logs.Info("Status get redis conn", err)
-		return nil
-	}
-	defer g.Rds.Release(conn)
+	conn := g.GetRedisConn()
+	defer g.ReleaseRedisConn(conn)
 
 	containersKey := fmt.Sprintf("eru:agent:%s:containers:meta", g.Config.HostName)
 	rep, err := gore.NewCommand("HGET", containersKey, cid).Run(conn)
@@ -151,11 +143,8 @@ func getContainerMeta(cid string) map[string]interface{} {
 }
 
 func reportContainerDeath(cid string) {
-	conn, err := g.Rds.Acquire()
-	if err != nil || conn == nil {
-		logs.Assert(err, "Get redis conn")
-	}
-	defer g.Rds.Release(conn)
+	conn := g.GetRedisConn()
+	defer g.ReleaseRedisConn(conn)
 
 	flagKey := fmt.Sprintf("eru:agent:%s:container:flag", cid)
 	rep, err := gore.NewCommand("GET", flagKey).Run(conn)

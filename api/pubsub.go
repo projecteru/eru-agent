@@ -20,23 +20,11 @@ func PubSubServe() {
 	go routeWatcher()
 }
 
-func getRdsConn() *gore.Conn {
-	conn, err := g.Rds.Acquire()
-	if err != nil || conn == nil {
-		logs.Assert(err, "Get redis conn")
-	}
-	return conn
-}
-
-func releaseConn(conn *gore.Conn) {
-	g.Rds.Release(conn)
-}
-
 func vlanWatcher() {
-	conn := getRdsConn()
-	report := getRdsConn()
-	defer releaseConn(conn)
-	defer releaseConn(report)
+	conn := g.GetRedisConn()
+	report := g.GetRedisConn()
+	defer g.ReleaseRedisConn(conn)
+	defer g.ReleaseRedisConn(report)
 
 	subs := gore.NewSubscriptions(conn)
 	defer subs.Close()
@@ -76,8 +64,8 @@ func vlanWatcher() {
 }
 
 func routeWatcher() {
-	conn := getRdsConn()
-	defer releaseConn(conn)
+	conn := g.GetRedisConn()
+	defer g.ReleaseRedisConn(conn)
 
 	subs := gore.NewSubscriptions(conn)
 	defer subs.Close()
@@ -105,8 +93,8 @@ func routeWatcher() {
 }
 
 func statusWatcher() {
-	conn := getRdsConn()
-	defer releaseConn(conn)
+	conn := g.GetRedisConn()
+	defer g.ReleaseRedisConn(conn)
 
 	subs := gore.NewSubscriptions(conn)
 	defer subs.Close()

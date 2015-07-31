@@ -38,3 +38,15 @@ func CloseConn() {
 	Rds.Close()
 	logs.Info("Global connections closed")
 }
+
+func GetRedisConn() *gore.Conn {
+	conn, err := Rds.Acquire()
+	if err != nil || conn == nil {
+		logs.Assert(err, "Get redis conn")
+	}
+	return conn
+}
+
+func ReleaseRedisConn(conn *gore.Conn) {
+	Rds.Release(conn)
+}
