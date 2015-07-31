@@ -13,7 +13,6 @@ type Request struct {
 }
 
 func (r *Request) Init() {
-	r.ParseForm()
 	r.Start = Atoi(r.Form.Get("start"), 0)
 	r.Limit = Atoi(r.Form.Get("limit"), 20)
 }

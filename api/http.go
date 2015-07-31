@@ -18,7 +18,7 @@ import (
 	"github.com/keimoon/gore"
 )
 
-// URL /api/version/
+// URL /version/
 func version(req *Request) (int, interface{}) {
 	return http.StatusOK, JSON{"version": common.VERSION}
 }
@@ -41,23 +41,15 @@ func listEruApps(req *Request) (int, interface{}) {
 	return http.StatusOK, ret
 }
 
-// URL /api/app/add/
-func addEruApp(req *Request) (int, interface{}) {
-	fmt.Println(req.Body)
-	fmt.Println(req.Form)
-	fmt.Println(req.URL.Query())
-	return http.StatusOK, JSON{}
-}
-
 // URL /api/container/:container_id/addvlan/
 func addVlanForContainer(req *Request) (int, interface{}) {
 	type IP struct {
-		Nid int    `json: "nid"`
-		IP  string `json: "ip"`
+		Nid int    `json:"nid"`
+		IP  string `json:"ip"`
 	}
 	type Data struct {
-		TaskID int  `json: "task_id"`
-		IPs    []IP `json: "ips"`
+		TaskID int  `json:"task_id"`
+		IPs    []IP `json:"ips"`
 	}
 
 	conn := g.GetRedisConn()
@@ -74,7 +66,7 @@ func addVlanForContainer(req *Request) (int, interface{}) {
 
 	feedKey := fmt.Sprintf("eru:agent:%s:feedback", data.TaskID)
 	for seq, ip := range data.IPs {
-		vethName := fmt.Sprintf("%s%s.%d", common.VLAN_PREFIX, ip.Nid, seq)
+		vethName := fmt.Sprintf("%s%d.%d", common.VLAN_PREFIX, ip.Nid, seq)
 		if network.AddVLan(vethName, ip.IP, cid) {
 			gore.NewCommand("LPUSH", feedKey, fmt.Sprintf("1|%s|%s|%s", cid, vethName, ip.IP)).Run(conn)
 			continue
@@ -88,9 +80,9 @@ func addVlanForContainer(req *Request) (int, interface{}) {
 // URL /api/container/add/
 func addNewContainer(req *Request) (int, interface{}) {
 	type Data struct {
-		Control     string                 `json: "control"`
-		ContainerID string                 `json: "container_id"`
-		Meta        map[string]interface{} `json: "meta"`
+		Control     string                 `json:"control"`
+		ContainerID string                 `json:"container_id"`
+		Meta        map[string]interface{} `json:"meta"`
 	}
 
 	data := &Data{}
@@ -131,7 +123,6 @@ func HTTPServe() {
 		"POST": {
 			"/api/container/add/":                   addNewContainer,
 			"/api/container/:container_id/addvlan/": addVlanForContainer,
-			"/api/app/add/":                         addEruApp,
 		},
 	}
 
