@@ -49,7 +49,7 @@ func vlanWatcher() {
 		for seq, content := range parser[2:] {
 			p := strings.Split(content, ":")
 			if len(p) != 2 {
-				logs.Info("API vlan watcher command invaild", content)
+				logs.Info("API vlan watcher ips invaild", content)
 				continue
 			}
 			nid, ips := p[0], p[1]
