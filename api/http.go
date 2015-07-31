@@ -77,6 +77,25 @@ func addVlanForContainer(req *Request) (int, interface{}) {
 	return http.StatusOK, JSON{"message": "ok"}
 }
 
+// URL /api/container/:container_id/setroute/
+func setRouteForContainer(req *Request) (int, interface{}) {
+	type Gateway struct {
+		IP string
+	}
+	cid := req.URL.Query().Get(":container_id")
+	data := &Gateway{}
+
+	decoder := json.NewDecoder(req.Body)
+	if err := decoder.Decode(data); err != nil {
+		return http.StatusBadRequest, JSON{"message": "wrong JSON format"}
+	}
+	if !network.SetDefaultRoute(cid, data.IP) {
+		logs.Info("Set default route failed")
+		return http.StatusServiceUnavailable, JSON{"message": "set default route failed"}
+	}
+	return http.StatusOK, JSON{"message": "ok"}
+}
+
 // URL /api/container/add/
 func addNewContainer(req *Request) (int, interface{}) {
 	type Data struct {
@@ -121,8 +140,10 @@ func HTTPServe() {
 			"/api/app/list/": listEruApps,
 		},
 		"POST": {
-			"/api/container/add/":                   addNewContainer,
-			"/api/container/:container_id/addvlan/": addVlanForContainer,
+			"/api/container/add/":                    addNewContainer,
+			"/api/container/:container_id/addvlan/":  addVlanForContainer,
+			"/api/container/:container_id/setroute/": setRouteForContainer,
+			"/api/app/add/":                          addEruApp,
 		},
 	}
 
