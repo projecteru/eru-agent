@@ -143,7 +143,6 @@ func HTTPServe() {
 			"/api/container/add/":                    addNewContainer,
 			"/api/container/:container_id/addvlan/":  addVlanForContainer,
 			"/api/container/:container_id/setroute/": setRouteForContainer,
-			"/api/app/add/":                          addEruApp,
 		},
 	}
 
