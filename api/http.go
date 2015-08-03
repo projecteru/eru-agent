@@ -48,8 +48,8 @@ func addVlanForContainer(req *Request) (int, interface{}) {
 		IP  string `json:"ip"`
 	}
 	type Data struct {
-		TaskID int  `json:"task_id"`
-		IPs    []IP `json:"ips"`
+		TaskID string `json:"task_id"`
+		IPs    []IP   `json:"ips"`
 	}
 
 	conn := g.GetRedisConn()
