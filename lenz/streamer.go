@@ -80,8 +80,8 @@ func syslogStreamer(logline *defines.Log, addr string) error {
 	if err != nil {
 		return err
 	}
-	io.WriteString(remote, logline.Data)
-	return nil
+	_, err = io.WriteString(remote, logline.Data)
+	return err
 }
 
 func tcpStreamer(logline *defines.Log, addr string) error {
@@ -97,8 +97,7 @@ func tcpStreamer(logline *defines.Log, addr string) error {
 		return err
 	}
 	defer conn.Close()
-	writeJSON(conn, logline)
-	return nil
+	return writeJSON(conn, logline)
 }
 
 func udpStreamer(logline *defines.Log, addr string) error {
@@ -114,11 +113,10 @@ func udpStreamer(logline *defines.Log, addr string) error {
 		return err
 	}
 	defer conn.Close()
-	writeJSON(conn, logline)
-	return nil
+	return writeJSON(conn, logline)
 }
 
-func writeJSON(w io.Writer, logline *defines.Log) {
+func writeJSON(w io.Writer, logline *defines.Log) error {
 	encoder := json.NewEncoder(w)
-	encoder.Encode(logline)
+	return encoder.Encode(logline)
 }
