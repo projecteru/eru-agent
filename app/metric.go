@@ -71,7 +71,7 @@ func (self *EruApp) updateStats() bool {
 	opt := docker.StatsOptions{self.ID, statsChan, false, nil, time.Duration(2 * time.Second)}
 	go func() {
 		if err := g.Docker.Stats(opt); err != nil {
-			logs.Info("Get Stats Failed", err)
+			logs.Info("Get stats failed", err)
 		}
 	}()
 	stats := <-statsChan
@@ -83,16 +83,13 @@ func (self *EruApp) updateStats() bool {
 	self.Info["cpu_system"] = stats.CPUStats.CPUUsage.UsageInKernelmode
 	self.Info["cpu_usage"] = stats.CPUStats.CPUUsage.TotalUsage
 	//FIXME in container it will get all CPUStats
-	//	for seq, d := range stats.CPUStats.CPUUsage.PercpuUsage {
-	//		self.Info[fmt.Sprintf("cpu_%d", seq)] = d
-	//	}
 	self.Info["mem_usage"] = stats.MemoryStats.Usage
 	self.Info["mem_max_usage"] = stats.MemoryStats.MaxUsage
 	self.Info["mem_rss"] = stats.MemoryStats.Stats.Rss
 
 	network, err := GetNetStats(self.Exec)
 	if err != nil {
-		logs.Info(err)
+		logs.Info("Get net stats failed", err)
 		return false
 	}
 	for k, d := range network {
@@ -114,9 +111,9 @@ func (self *EruApp) calcRate(now time.Time) {
 	second_t := delta.Seconds()
 	for k, d := range self.Info {
 		switch {
-		case strings.HasPrefix(k, "cpu_") && d > self.Save[k]:
+		case strings.HasPrefix(k, "cpu_") && d >= self.Save[k]:
 			self.Rate[fmt.Sprintf("%s_rate", k)] = float64(d-self.Save[k]) / nano_t
-		case strings.HasPrefix(k, common.VLAN_PREFIX) && d > self.Save[k]:
+		case strings.HasPrefix(k, common.VLAN_PREFIX) && d >= self.Save[k]:
 			self.Rate[fmt.Sprintf("%s.rate", k)] = float64(d-self.Save[k]) / second_t
 		case strings.HasPrefix(k, "mem"):
 			self.Rate[k] = float64(d)
