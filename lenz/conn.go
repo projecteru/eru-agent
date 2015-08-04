@@ -22,11 +22,13 @@ type UpStream struct {
 }
 
 func NewUpStream(addr string) (up *UpStream, err error) {
-	up = &UpStream{addr: addr}
-	switch u, err := url.Parse(addr); {
-	case err != nil:
+	u, err := url.Parse(addr)
+	if err != nil {
 		logs.Info("Parse upstream addr failed", err)
 		return nil, err
+	}
+	up = &UpStream{addr: u.Host}
+	switch {
 	case u.Scheme == "udp":
 		err = up.createUDPConn()
 		return up, err
