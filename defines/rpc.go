@@ -43,7 +43,7 @@ func (this *SingleConnRpcClient) insureConn() error {
 			return nil
 		}
 
-		logs.Info("Metrics rpc dial fail", this.RpcServer, err)
+		logs.Info("Metrics rpc dial fail", err)
 		if retry > 5 {
 			return err
 		}
