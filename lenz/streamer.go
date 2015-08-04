@@ -6,11 +6,11 @@ import (
 	"io"
 	"log/syslog"
 	"math"
-	"net"
 	"net/url"
 
 	"github.com/HunanTV/eru-agent/defines"
 	"github.com/HunanTV/eru-agent/logs"
+	"github.com/HunanTV/eru-agent/pool"
 )
 
 func Streamer(route *defines.Route, logstream chan *defines.Log, stdout bool) {
@@ -85,35 +85,23 @@ func syslogStreamer(logline *defines.Log, addr string) error {
 }
 
 func tcpStreamer(logline *defines.Log, addr string) error {
-	tcpAddr, err := net.ResolveTCPAddr("tcp", addr)
+	conn, err := pool.ConnPool.Get(addr, "tcp")
+	defer pool.ConnPool.Put(conn, addr, "tcp")
 	if err != nil {
-		logs.Debug("Resolve tcp failed", err)
+		logs.Debug("Get connection failed", err)
 		return err
 	}
-
-	conn, err := net.DialTCP("tcp", nil, tcpAddr)
-	if err != nil {
-		logs.Debug("Connect backend failed", err)
-		return err
-	}
-	defer conn.Close()
 	writeJSON(conn, logline)
 	return nil
 }
 
 func udpStreamer(logline *defines.Log, addr string) error {
-	udpAddr, err := net.ResolveUDPAddr("udp", addr)
+	conn, err := pool.ConnPool.Get(addr, "udp")
 	if err != nil {
-		logs.Debug("Resolve udp failed", err)
+		logs.Debug("Get connection failed", err)
 		return err
 	}
-
-	conn, err := net.DialUDP("udp", nil, udpAddr)
-	if err != nil {
-		logs.Debug("Connect backend failed", err)
-		return err
-	}
-	defer conn.Close()
+	defer pool.ConnPool.Put(conn, addr, "udp")
 	writeJSON(conn, logline)
 	return nil
 }
