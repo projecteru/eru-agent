@@ -12,6 +12,7 @@ import (
 	"github.com/HunanTV/eru-agent/lenz"
 	"github.com/HunanTV/eru-agent/logs"
 	"github.com/HunanTV/eru-agent/network"
+	"github.com/HunanTV/eru-agent/pool"
 	"github.com/HunanTV/eru-agent/status"
 	"github.com/HunanTV/eru-agent/utils"
 )
@@ -21,6 +22,9 @@ func main() {
 	g.InitialConn()
 	g.InitTransfers()
 	defer g.CloseConn()
+
+	pool.InitPool()
+	defer pool.ClosePool()
 
 	lenz.InitLenz()
 	status.InitStatus()
