@@ -84,8 +84,9 @@ func monitor() {
 			// Check if exists
 			if app.Valid(event.ID) {
 				app.Remove(event.ID)
-				reportContainerDeath(event.ID)
 			}
+			// 死了就发送吧, 无所谓
+			reportContainerDeath(event.ID)
 		case common.STATUS_START:
 			// if not in watching list, just ignore it
 			if meta := getContainerMeta(event.ID); meta != nil && !app.Valid(event.ID) {
@@ -99,7 +100,10 @@ func monitor() {
 					logs.Info("Create EruApp failed")
 					break
 				}
-				app.Add(eruApp)
+				if !app.Add(eruApp) {
+					logs.Info("EruApp Add failed")
+					break
+				}
 				lenz.Attacher.Attach(&eruApp.Meta)
 				reportContainerCure(event.ID)
 			}

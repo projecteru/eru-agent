@@ -74,8 +74,17 @@ func (self *EruApp) updateStats() bool {
 			logs.Info("Get stats failed", err)
 		}
 	}()
-	stats := <-statsChan
-	if stats == nil {
+
+	var stats *docker.Stats
+	select {
+	case stats = <-statsChan:
+		// 很幸运拿到了数据, 那么继续
+		if stats == nil {
+			return false
+		}
+	case <-time.After(2 * time.Second):
+		// 超时了, 那就直接返回吧
+		// biè 一直 block 住别人
 		return false
 	}
 
