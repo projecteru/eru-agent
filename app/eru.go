@@ -57,19 +57,20 @@ func NewEruApp(ID, containerName string, extend map[string]interface{}) *EruApp 
 var lock sync.RWMutex
 var Apps map[string]*EruApp = map[string]*EruApp{}
 
-func Add(app *EruApp) {
+func Add(app *EruApp) bool {
 	lock.Lock()
 	defer lock.Unlock()
 	if _, ok := Apps[app.ID]; ok {
 		// safe add
-		return
+		return false
 	}
 	if !app.InitMetric() {
 		// not record
-		return
+		return false
 	}
 	go app.Report()
 	Apps[app.ID] = app
+	return true
 }
 
 func Remove(ID string) {
