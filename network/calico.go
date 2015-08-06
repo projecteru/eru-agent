@@ -96,7 +96,7 @@ func ContaienrIP(containerID, action, ip string) bool {
 		return false
 	}
 
-	logs.Info(action, containerID, "ip failed")
+	logs.Info(action, containerID, "ip successfully")
 	return true
 }
 
