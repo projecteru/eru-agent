@@ -16,6 +16,7 @@ type LenzConfig struct {
 	Routes   string
 	Forwards []string
 	Stdout   bool
+	Count    int
 }
 
 type MetricsConfig struct {

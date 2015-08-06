@@ -7,9 +7,8 @@ import (
 	"github.com/HunanTV/eru-agent/logs"
 )
 
-var upstreams map[string]*UpStream = map[string]*UpStream{}
-
 func Streamer(route *defines.Route, logstream chan *defines.Log, stdout bool) {
+	var upstreams map[string]*UpStream = map[string]*UpStream{}
 	var types map[string]struct{}
 	var count int64 = 0
 	if route.Source != nil {
@@ -18,6 +17,15 @@ func Streamer(route *defines.Route, logstream chan *defines.Log, stdout bool) {
 			types[t] = struct{}{}
 		}
 	}
+	defer func() {
+		for _, remote := range upstreams {
+			remote.Flush()
+			for _, log := range remote.Tail() {
+				logs.Info("Streamer can't send to remote", log)
+			}
+			remote.Close()
+		}
+	}()
 	for logline := range logstream {
 		if types != nil {
 			if _, ok := types[logline.Type]; !ok {
@@ -26,7 +34,6 @@ func Streamer(route *defines.Route, logstream chan *defines.Log, stdout bool) {
 		}
 		logline.Tag = route.Target.AppendTag
 		logline.Count = count
-
 		switch stdout {
 		case true:
 			logs.Info("Debug Output", logline)
@@ -47,6 +54,9 @@ func Streamer(route *defines.Route, logstream chan *defines.Log, stdout bool) {
 				}
 				if err := upstreams[addr].WriteData(logline); err != nil {
 					upstreams[addr].Close()
+					for _, log := range upstreams[addr].Tail() {
+						logstream <- log
+					}
 					delete(upstreams, addr)
 					continue
 				}

@@ -18,6 +18,7 @@ lenz:
   forwards:
     - udp://10.100.1.154:50433
   stdout: False
+  count: 10
 
 metrics:
   step: 30
