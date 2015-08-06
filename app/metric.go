@@ -68,15 +68,22 @@ func (self *EruApp) Report() {
 
 func (self *EruApp) updateStats() bool {
 	statsChan := make(chan *docker.Stats)
-	opt := docker.StatsOptions{self.ID, statsChan, false, nil, time.Duration(2 * time.Second)}
+	doneChan := make(chan bool)
+	opt := docker.StatsOptions{self.ID, statsChan, false, doneChan, time.Duration(2 * time.Second)}
 	go func() {
 		if err := g.Docker.Stats(opt); err != nil {
 			logs.Info("Get stats failed", err)
 		}
 	}()
-	stats := <-statsChan
-	if stats == nil {
-		return false
+
+	var stats *docker.Stats
+	select {
+	case stats = <-statsChan:
+		if stats == nil {
+			return false
+		}
+	case <-time.After(3 * time.Second):
+		doneChan <- true
 	}
 
 	self.Info["cpu_user"] = stats.CPUStats.CPUUsage.UsageInUsermode
