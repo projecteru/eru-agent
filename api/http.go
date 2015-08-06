@@ -141,8 +141,8 @@ func showEndPointForContainer(req *Request) (int, interface{}) {
 	return http.StatusOK, JSON{"endpoint_id": out}
 }
 
-//URL POST /api/calico/container/ip/:container_id/
-func calicoAddIPToContainer(req *Request) (int, interface{}) {
+//URL POST /api/calico/containerip/:container_id/
+func addIPToContainer(req *Request) (int, interface{}) {
 	type Data struct {
 		IPAddr string `json:"ip_addr"`
 	}
@@ -163,8 +163,8 @@ func calicoAddIPToContainer(req *Request) (int, interface{}) {
 	}
 }
 
-//URL DELETE /api/calico/container/ip/:container_id/
-func calicoRemoveIPToContainer(req *Request) (int, interface{}) {
+//URL DELETE /api/calico/containerip/:container_id/
+func removeIPFromContainer(req *Request) (int, interface{}) {
 	type Data struct {
 		IPAddr string `json:"ip_addr"`
 	}
@@ -249,17 +249,17 @@ func HTTPServe() {
 			"/api/calico/container/:container_id/endpoint/": showEndPointForContainer,
 		},
 		"POST": {
-			"/api/container/add/":                     addNewContainer,
-			"/api/container/:container_id/addvlan/":   addVlanForContainer,
-			"/api/container/:container_id/setroute/":  setRouteForContainer,
-			"/api/calico/node/":                       startCalicoNode,
-			"/api/calico/container/:container_id/":    addContainerToCalicoNet,
-			"/api/calico/container/ip/:container_id/": calicoAddIPToContainer,
+			"/api/container/add/":                    addNewContainer,
+			"/api/container/:container_id/addvlan/":  addVlanForContainer,
+			"/api/container/:container_id/setroute/": setRouteForContainer,
+			"/api/calico/node/":                      startCalicoNode,
+			"/api/calico/container/:container_id/":   addContainerToCalicoNet,
+			"/api/calico/containerip/:container_id/": addIPToContainer,
 		},
 		"DELETE": {
-			"/api/calico/node/":                       stopCalicoNode,
-			"/api/calico/container/:container_id/":    deleteContainerFromCalicoNet,
-			"/api/calico/container/ip/:container_id/": calicoRemoveIPToContainer,
+			"/api/calico/node/":                      stopCalicoNode,
+			"/api/calico/container/:container_id/":   deleteContainerFromCalicoNet,
+			"/api/calico/containerip/:container_id/": removeIPFromContainer,
 		},
 	}
 
