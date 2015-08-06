@@ -20,6 +20,9 @@ func Streamer(route *defines.Route, logstream chan *defines.Log, stdout bool) {
 	defer func() {
 		for _, remote := range upstreams {
 			remote.Flush()
+			for _, log := range remote.Tail() {
+				logs.Info("Streamer can't send to remote", log)
+			}
 			remote.Close()
 		}
 	}()
@@ -51,6 +54,9 @@ func Streamer(route *defines.Route, logstream chan *defines.Log, stdout bool) {
 				}
 				if err := upstreams[addr].WriteData(logline); err != nil {
 					upstreams[addr].Close()
+					for _, log := range upstreams[addr].Tail() {
+						logstream <- log
+					}
 					delete(upstreams, addr)
 					continue
 				}

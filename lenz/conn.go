@@ -118,9 +118,14 @@ func (self *UpStream) writeJSON(logline *defines.Log) error {
 	return self.Flush()
 }
 
+func (self *UpStream) Tail() []*defines.Log {
+	return self.buffer
+}
+
 func (self *UpStream) Flush() error {
-	for _, log := range self.buffer {
+	for i, log := range self.buffer {
 		if err := self.encoder.Encode(log); err != nil {
+			self.buffer = self.buffer[i:]
 			return err
 		}
 	}
