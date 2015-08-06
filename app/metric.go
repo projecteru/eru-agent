@@ -76,7 +76,7 @@ func (self *EruApp) updateStats() bool {
 		}
 	}()
 
-	var stats *docker.Stats
+	stats := &docker.Stats{}
 	select {
 	case stats = <-statsChan:
 		if stats == nil {
