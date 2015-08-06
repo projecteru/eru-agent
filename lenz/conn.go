@@ -10,15 +10,18 @@ import (
 	"net/url"
 
 	"github.com/HunanTV/eru-agent/defines"
+	"github.com/HunanTV/eru-agent/g"
 	"github.com/HunanTV/eru-agent/logs"
 )
 
 type UpStream struct {
-	addr   string
-	scheme string
-	tcplog *net.TCPConn
-	udplog *net.UDPConn
-	Close  func() error
+	addr    string
+	scheme  string
+	conn    io.Writer
+	encoder *json.Encoder
+	buffer  []*defines.Log
+	count   int
+	Close   func() error
 }
 
 func NewUpStream(addr string) (up *UpStream, err error) {
@@ -28,6 +31,8 @@ func NewUpStream(addr string) (up *UpStream, err error) {
 		return nil, err
 	}
 	up = &UpStream{addr: u.Host}
+	up.buffer = []*defines.Log{}
+	up.count = 0
 	switch {
 	case u.Scheme == "udp":
 		err = up.createUDPConn()
@@ -45,9 +50,9 @@ func NewUpStream(addr string) (up *UpStream, err error) {
 func (self *UpStream) WriteData(logline *defines.Log) error {
 	switch self.scheme {
 	case "tcp":
-		return writeJSON(self.tcplog, logline)
+		return self.writeJSON(logline)
 	case "udp":
-		return writeJSON(self.udplog, logline)
+		return self.writeJSON(logline)
 	case "syslog":
 		tag := fmt.Sprintf("%s.%s", logline.Name, logline.Tag)
 		remote, err := syslog.Dial("udp", self.addr, syslog.LOG_USER|syslog.LOG_INFO, tag)
@@ -73,8 +78,9 @@ func (self *UpStream) createUDPConn() error {
 		logs.Info("Connect backend failed", err)
 		return err
 	}
-	self.udplog = conn
-	self.Close = self.udplog.Close
+	self.conn = conn
+	self.encoder = json.NewEncoder(conn)
+	self.Close = conn.Close
 	return nil
 }
 
@@ -90,8 +96,9 @@ func (self *UpStream) createTCPConn() error {
 		logs.Debug("Connect backend failed", err)
 		return err
 	}
-	self.tcplog = conn
-	self.Close = self.tcplog.Close
+	self.conn = conn
+	self.encoder = json.NewEncoder(conn)
+	self.Close = conn.Close
 	return nil
 }
 
@@ -101,7 +108,23 @@ func (self *UpStream) createSyslog() error {
 	return nil
 }
 
-func writeJSON(w io.Writer, logline *defines.Log) error {
-	encoder := json.NewEncoder(w)
-	return encoder.Encode(logline)
+func (self *UpStream) writeJSON(logline *defines.Log) error {
+	self.buffer = append(self.buffer, logline)
+	self.count += 1
+	if self.count < g.Config.Lenz.Count {
+		return nil
+	}
+	logs.Debug("Streamer buffer full, send to remote")
+	return self.Flush()
+}
+
+func (self *UpStream) Flush() error {
+	for _, log := range self.buffer {
+		if err := self.encoder.Encode(log); err != nil {
+			return err
+		}
+	}
+	self.buffer = []*defines.Log{}
+	self.count = 0
+	return nil
 }
