@@ -81,11 +81,8 @@ func monitor() {
 		logs.Debug("Status", event.Status, event.ID[:12], event.From)
 		switch event.Status {
 		case common.STATUS_DIE:
-			// Check if exists
-			if app.Valid(event.ID) {
-				app.Remove(event.ID)
-				reportContainerDeath(event.ID)
-			}
+			app.Remove(event.ID)
+			reportContainerDeath(event.ID)
 		case common.STATUS_START:
 			// if not in watching list, just ignore it
 			if meta := getContainerMeta(event.ID); meta != nil && !app.Valid(event.ID) {
