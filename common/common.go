@@ -7,7 +7,7 @@ const (
 	CNAME_NUM   = 3
 	VLAN_PREFIX = "vnbe"
 
-	VERSION = "0.13.6"
+	VERSION = "0.13.7"
 
 	OOM_KILLED = 1
 )
