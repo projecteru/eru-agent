@@ -78,12 +78,13 @@ func StartMonitor() {
 
 func monitor() {
 	for event := range events {
-		logs.Debug("Status", event.Status, event.ID[:12], event.From)
 		switch event.Status {
 		case common.STATUS_DIE:
+			logs.Debug("Status", event.Status, event.ID[:12], event.From)
 			app.Remove(event.ID)
 			reportContainerDeath(event.ID)
 		case common.STATUS_START:
+			logs.Debug("Status", event.Status, event.ID[:12], event.From)
 			// if not in watching list, just ignore it
 			if meta := getContainerMeta(event.ID); meta != nil && !app.Valid(event.ID) {
 				container, err := g.Docker.InspectContainer(event.ID)

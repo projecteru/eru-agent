@@ -5,7 +5,9 @@ import (
 	"io"
 	"strings"
 	"sync"
+	"time"
 
+	"github.com/HunanTV/eru-agent/common"
 	"github.com/HunanTV/eru-agent/defines"
 	"github.com/HunanTV/eru-agent/logs"
 	"github.com/fsouza/go-dockerclient"
@@ -168,6 +170,7 @@ func NewLogPump(stdout, stderr io.Reader, app *defines.Meta) *LogPump {
 				EntryPoint: app.EntryPoint,
 				Ident:      app.Ident,
 				Type:       typ,
+				Datetime:   time.Now().Format(common.DATETIME_FORMAT),
 			})
 		}
 	}

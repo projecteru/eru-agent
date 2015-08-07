@@ -38,6 +38,7 @@ func Streamer(route *defines.Route, logstream chan *defines.Log, stdout bool) {
 		case true:
 			logs.Info("Debug Output", logline)
 		default:
+			var f bool = false
 			for offset := 0; offset < route.Backends.Len(); offset++ {
 				addr, err := route.Backends.Get(logline.Name, offset)
 				if err != nil {
@@ -52,7 +53,9 @@ func Streamer(route *defines.Route, logstream chan *defines.Log, stdout bool) {
 						upstreams[addr] = ups
 					}
 				}
+				f = true
 				if err := upstreams[addr].WriteData(logline); err != nil {
+					logs.Info("Sent to remote failed", err)
 					upstreams[addr].Close()
 					for _, log := range upstreams[addr].Tail() {
 						logstream <- log
@@ -62,6 +65,9 @@ func Streamer(route *defines.Route, logstream chan *defines.Log, stdout bool) {
 				}
 				//logs.Debug("Lenz Send", logline.Name, logline.EntryPoint, logline.ID, "to", addr)
 				break
+			}
+			if !f {
+				logs.Info("Lenz failed", logline.ID[:12], logline.Name, logline.EntryPoint, logline.Data)
 			}
 		}
 		if count == math.MaxInt64 {

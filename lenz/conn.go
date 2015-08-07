@@ -21,6 +21,7 @@ type UpStream struct {
 	encoder *json.Encoder
 	buffer  []*defines.Log
 	count   int
+	write   func(logline *defines.Log) error
 	Close   func() error
 }
 
@@ -33,6 +34,21 @@ func NewUpStream(addr string) (up *UpStream, err error) {
 	up = &UpStream{addr: u.Host}
 	up.buffer = []*defines.Log{}
 	up.count = 0
+	if g.Config.Lenz.Count > 0 {
+		up.write = func(logline *defines.Log) error {
+			up.buffer = append(up.buffer, logline)
+			up.count += 1
+			if up.count < g.Config.Lenz.Count {
+				return nil
+			}
+			logs.Debug("Streamer buffer full, send to remote")
+			return up.Flush()
+		}
+	} else {
+		up.write = func(logline *defines.Log) error {
+			return up.encoder.Encode(logline)
+		}
+	}
 	switch {
 	case u.Scheme == "udp":
 		err = up.createUDPConn()
@@ -45,25 +61,6 @@ func NewUpStream(addr string) (up *UpStream, err error) {
 		return up, err
 	}
 	return nil, nil
-}
-
-func (self *UpStream) WriteData(logline *defines.Log) error {
-	switch self.scheme {
-	case "tcp":
-		return self.writeJSON(logline)
-	case "udp":
-		return self.writeJSON(logline)
-	case "syslog":
-		tag := fmt.Sprintf("%s.%s", logline.Name, logline.Tag)
-		remote, err := syslog.Dial("udp", self.addr, syslog.LOG_USER|syslog.LOG_INFO, tag)
-		if err != nil {
-			return err
-		}
-		_, err = io.WriteString(remote, logline.Data)
-		return err
-	default:
-		return errors.New("Not support type")
-	}
 }
 
 func (self *UpStream) createUDPConn() error {
@@ -108,18 +105,27 @@ func (self *UpStream) createSyslog() error {
 	return nil
 }
 
-func (self *UpStream) writeJSON(logline *defines.Log) error {
-	self.buffer = append(self.buffer, logline)
-	self.count += 1
-	if self.count < g.Config.Lenz.Count {
-		return nil
-	}
-	logs.Debug("Streamer buffer full, send to remote")
-	return self.Flush()
-}
-
 func (self *UpStream) Tail() []*defines.Log {
 	return self.buffer
+}
+
+func (self *UpStream) WriteData(logline *defines.Log) error {
+	switch self.scheme {
+	case "tcp":
+		return self.write(logline)
+	case "udp":
+		return self.write(logline)
+	case "syslog":
+		tag := fmt.Sprintf("%s.%s", logline.Name, logline.Tag)
+		remote, err := syslog.Dial("udp", self.addr, syslog.LOG_USER|syslog.LOG_INFO, tag)
+		if err != nil {
+			return err
+		}
+		_, err = io.WriteString(remote, logline.Data)
+		return err
+	default:
+		return errors.New("Not support type")
+	}
 }
 
 func (self *UpStream) Flush() error {

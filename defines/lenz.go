@@ -16,6 +16,7 @@ type Log struct {
 	Data       string `json:"data"`
 	Tag        string `json:"tag"`
 	Count      int64  `json:"count"`
+	Datetime   string `json:"datetime"`
 }
 
 type Route struct {
