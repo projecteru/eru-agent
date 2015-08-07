@@ -9,5 +9,6 @@ const (
 
 	VERSION = "0.13.7"
 
-	OOM_KILLED = 1
+	OOM_KILLED      = 1
+	DATETIME_FORMAT = "2006-01-02 15:04:05"
 )
