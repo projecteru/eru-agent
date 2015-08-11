@@ -18,6 +18,7 @@ func Streamer(route *defines.Route, logstream chan *defines.Log, stdout bool) {
 		}
 	}
 	defer func() {
+		logs.Debug("Flush", route.ID, "cache logs")
 		for _, remote := range upstreams {
 			remote.Flush()
 			for _, log := range remote.Tail() {
@@ -25,6 +26,7 @@ func Streamer(route *defines.Route, logstream chan *defines.Log, stdout bool) {
 			}
 			remote.Close()
 		}
+		route.Done <- struct{}{}
 	}()
 	for logline := range logstream {
 		if types != nil {
@@ -34,41 +36,40 @@ func Streamer(route *defines.Route, logstream chan *defines.Log, stdout bool) {
 		}
 		logline.Tag = route.Target.AppendTag
 		logline.Count = count
-		switch stdout {
-		case true:
+		if stdout {
 			logs.Info("Debug Output", logline)
-		default:
-			var f bool = false
-			for offset := 0; offset < route.Backends.Len(); offset++ {
-				addr, err := route.Backends.Get(logline.Name, offset)
-				if err != nil {
-					logs.Info("Get backend failed", err, logline.Name, logline.Data)
-					break
-				}
-				if _, ok := upstreams[addr]; !ok {
-					if ups, err := NewUpStream(addr); err != nil || ups == nil {
-						route.Backends.Remove(addr)
-						continue
-					} else {
-						upstreams[addr] = ups
-					}
-				}
-				f = true
-				if err := upstreams[addr].WriteData(logline); err != nil {
-					logs.Info("Sent to remote failed", err)
-					upstreams[addr].Close()
-					for _, log := range upstreams[addr].Tail() {
-						logstream <- log
-					}
-					delete(upstreams, addr)
-					continue
-				}
-				//logs.Debug("Lenz Send", logline.Name, logline.EntryPoint, logline.ID, "to", addr)
+			continue
+		}
+		var f bool = false
+		for offset := 0; offset < route.Backends.Len(); offset++ {
+			addr, err := route.Backends.Get(logline.Name, offset)
+			if err != nil {
+				logs.Info("Get backend failed", err, logline.Name, logline.Data)
 				break
 			}
-			if !f {
-				logs.Info("Lenz failed", logline.ID[:12], logline.Name, logline.EntryPoint, logline.Data)
+			if _, ok := upstreams[addr]; !ok {
+				if ups, err := NewUpStream(addr); err != nil || ups == nil {
+					route.Backends.Remove(addr)
+					continue
+				} else {
+					upstreams[addr] = ups
+				}
 			}
+			f = true
+			if err := upstreams[addr].WriteData(logline); err != nil {
+				logs.Info("Sent to remote failed", err)
+				upstreams[addr].Close()
+				for _, log := range upstreams[addr].Tail() {
+					logstream <- log
+				}
+				delete(upstreams, addr)
+				continue
+			}
+			//logs.Debug("Lenz Send", logline.Name, logline.EntryPoint, logline.ID, "to", addr)
+			break
+		}
+		if !f {
+			logs.Info("Lenz failed", logline.ID[:12], logline.Name, logline.EntryPoint, logline.Data)
 		}
 		if count == math.MaxInt64 {
 			count = 0

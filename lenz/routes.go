@@ -6,6 +6,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/HunanTV/eru-agent/common"
 	"github.com/HunanTV/eru-agent/defines"
 	"github.com/HunanTV/eru-agent/logs"
 	"github.com/HunanTV/eru-agent/utils"
@@ -49,7 +50,7 @@ func (rm *RouteManager) Reload() error {
 	}
 
 	for key, _ := range rm.routes {
-		if _, ok := newRoutesMap[key]; ok || key == "lenz_default" {
+		if _, ok := newRoutesMap[key]; ok || key == common.LENZ_DEFAULT {
 			continue
 		}
 		rm.Remove(key)
@@ -93,12 +94,13 @@ func (rm *RouteManager) Add(route *defines.Route) error {
 	rm.Lock()
 	defer rm.Unlock()
 	route.Closer = make(chan bool)
+	route.Done = make(chan struct{})
 	rm.routes[route.ID] = route
 	go func() {
 		logstream := make(chan *defines.Log)
-		defer close(logstream)
 		go Streamer(route, logstream, rm.stdout)
 		rm.attacher.Listen(route.Source, logstream, route.Closer)
+		close(logstream)
 	}()
 	if rm.persistor != nil {
 		if err := rm.persistor.Add(route); err != nil {
@@ -114,6 +116,7 @@ func (rm *RouteManager) Remove(id string) bool {
 	route, ok := rm.routes[id]
 	if ok && route.Closer != nil {
 		route.Closer <- true
+		<-route.Done
 	}
 	delete(rm.routes, id)
 	if rm.persistor != nil {
