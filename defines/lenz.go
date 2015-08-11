@@ -25,6 +25,7 @@ type Route struct {
 	Target   *Target `json:"target"`
 	Backends *consistent.Consistent
 	Closer   chan bool
+	Done     chan struct{}
 }
 
 func (s *Route) LoadBackends() {

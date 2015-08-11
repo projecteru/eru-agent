@@ -25,6 +25,7 @@ func main() {
 	lenz.InitLenz()
 	status.InitStatus()
 	network.InitVlan()
+	defer lenz.CloseLenz()
 
 	utils.WritePid(g.Config.PidFile)
 	defer os.Remove(g.Config.PidFile)
