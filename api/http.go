@@ -123,8 +123,8 @@ func addNewContainer(req *Request) (int, interface{}) {
 			break
 		}
 		if eruApp := app.NewEruApp(container.ID, container.Name, data.Meta); eruApp != nil {
-			app.Add(eruApp)
 			lenz.Attacher.Attach(&eruApp.Meta)
+			app.Add(eruApp)
 		}
 	}
 	return http.StatusOK, JSON{"message": "ok"}

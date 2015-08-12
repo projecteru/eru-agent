@@ -64,8 +64,8 @@ func Load() {
 			continue
 		}
 		if eruApp := app.NewEruApp(container.ID, container.Names[0], meta); eruApp != nil {
-			app.Add(eruApp)
 			lenz.Attacher.Attach(&eruApp.Meta)
+			app.Add(eruApp)
 			reportContainerCure(container.ID)
 		}
 	}
@@ -97,8 +97,8 @@ func monitor() {
 					logs.Info("Create EruApp failed")
 					break
 				}
-				app.Add(eruApp)
 				lenz.Attacher.Attach(&eruApp.Meta)
+				app.Add(eruApp)
 				reportContainerCure(event.ID)
 			}
 		}
