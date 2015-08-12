@@ -132,8 +132,8 @@ func statusWatcher() {
 				break
 			}
 			if eruApp := app.NewEruApp(container.ID, container.Name, meta); eruApp != nil {
-				app.Add(eruApp)
 				lenz.Attacher.Attach(&eruApp.Meta)
+				app.Add(eruApp)
 			}
 		}
 	}
