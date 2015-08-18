@@ -59,9 +59,11 @@ func Streamer(route *defines.Route, logstream chan *defines.Log, stdout bool) {
 			if err := upstreams[addr].WriteData(logline); err != nil {
 				logs.Info("Sent to remote failed", err)
 				upstreams[addr].Close()
-				for _, log := range upstreams[addr].Tail() {
-					logstream <- log
-				}
+				go func(upstream *UpStream) {
+					for _, log := range upstream.Tail() {
+						logstream <- log
+					}
+				}(upstreams[addr])
 				delete(upstreams, addr)
 				continue
 			}
