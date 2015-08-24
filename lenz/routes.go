@@ -24,11 +24,10 @@ type RouteManager struct {
 	persistor RouteStore
 	attacher  *AttachManager
 	routes    map[string]*defines.Route
-	stdout    bool
 }
 
-func NewRouteManager(attacher *AttachManager, stdout bool) *RouteManager {
-	return &RouteManager{attacher: attacher, routes: make(map[string]*defines.Route), stdout: stdout}
+func NewRouteManager(attacher *AttachManager) *RouteManager {
+	return &RouteManager{attacher: attacher, routes: make(map[string]*defines.Route)}
 }
 
 func (rm *RouteManager) Reload() error {
@@ -98,7 +97,7 @@ func (rm *RouteManager) Add(route *defines.Route) error {
 	rm.routes[route.ID] = route
 	go func() {
 		logstream := make(chan *defines.Log)
-		go Streamer(route, logstream, rm.stdout)
+		go Streamer(route, logstream)
 		rm.attacher.Listen(route.Source, logstream, route.Closer)
 		close(logstream)
 	}()
