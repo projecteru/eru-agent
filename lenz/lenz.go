@@ -14,8 +14,8 @@ var Router *RouteManager
 var Routefs RouteFileStore
 
 func InitLenz() {
-	Attacher = NewAttachManager(g.Docker)
-	Router = NewRouteManager(Attacher, g.Config.Lenz.Stdout)
+	Attacher = NewAttachManager()
+	Router = NewRouteManager(Attacher)
 	Routefs = RouteFileStore(g.Config.Lenz.Routes)
 	if len(g.Config.Lenz.Forwards) > 0 {
 		logs.Debug("Lenz Routing all to", g.Config.Lenz.Forwards)

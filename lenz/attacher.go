@@ -9,6 +9,7 @@ import (
 
 	"github.com/HunanTV/eru-agent/common"
 	"github.com/HunanTV/eru-agent/defines"
+	"github.com/HunanTV/eru-agent/g"
 	"github.com/HunanTV/eru-agent/logs"
 	"github.com/fsouza/go-dockerclient"
 )
@@ -17,15 +18,13 @@ type AttachManager struct {
 	sync.Mutex
 	attached map[string]*LogPump
 	channels map[chan *defines.AttachEvent]struct{}
-	client   *defines.DockerWrapper
 }
 
-func NewAttachManager(client *defines.DockerWrapper) *AttachManager {
+func NewAttachManager() *AttachManager {
 	m := &AttachManager{
 		attached: make(map[string]*LogPump),
 		channels: make(map[chan *defines.AttachEvent]struct{}),
 	}
-	m.client = client
 	return m
 }
 
@@ -44,7 +43,7 @@ func (m *AttachManager) Attach(app *defines.Meta) {
 	outrd, outwr := io.Pipe()
 	errrd, errwr := io.Pipe()
 	go func() {
-		err := m.client.AttachToContainer(docker.AttachToContainerOptions{
+		err := g.Docker.AttachToContainer(docker.AttachToContainerOptions{
 			Container:    app.ID,
 			OutputStream: outwr,
 			ErrorStream:  errwr,

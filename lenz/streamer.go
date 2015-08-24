@@ -4,10 +4,11 @@ import (
 	"math"
 
 	"github.com/HunanTV/eru-agent/defines"
+	"github.com/HunanTV/eru-agent/g"
 	"github.com/HunanTV/eru-agent/logs"
 )
 
-func Streamer(route *defines.Route, logstream chan *defines.Log, stdout bool) {
+func Streamer(route *defines.Route, logstream chan *defines.Log) {
 	var upstreams map[string]*UpStream = map[string]*UpStream{}
 	var types map[string]struct{}
 	var count int64 = 0
@@ -36,7 +37,7 @@ func Streamer(route *defines.Route, logstream chan *defines.Log, stdout bool) {
 		}
 		logline.Tag = route.Target.AppendTag
 		logline.Count = count
-		if stdout {
+		if g.Config.Lenz.Stdout {
 			logs.Info("Debug Output", logline)
 			continue
 		}
