@@ -43,8 +43,8 @@ func (self *EruApp) Exit() {
 
 func (self *EruApp) Report() {
 	defer self.Client.Close()
-	defer logs.Info(self.Name, self.EntryPoint, "metrics report stop")
-	logs.Info(self.Name, self.EntryPoint, "metrics report start")
+	defer logs.Info(self.Name, self.EntryPoint, self.ID[:12], "metrics report stop")
+	logs.Info(self.Name, self.EntryPoint, self.ID[:12], "metrics report start")
 	for {
 		select {
 		case now := <-time.Tick(self.Step):
@@ -140,6 +140,7 @@ func (self *EruApp) send(rate map[string]float64) {
 		logs.Debug("Metrics call Transfer.Update fail", err, self.Name, self.EntryPoint)
 		return
 	}
+	logs.Debug(data)
 	logs.Debug(self.Endpoint, self.Last, &resp)
 }
 
