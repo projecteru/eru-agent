@@ -38,8 +38,6 @@ func (m *AttachManager) Attach(app *defines.Meta) {
 	if m.Attached(app.ID) {
 		return
 	}
-	success := make(chan struct{})
-	failure := make(chan error)
 	outrd, outwr := io.Pipe()
 	errrd, errwr := io.Pipe()
 	go func() {
@@ -51,31 +49,23 @@ func (m *AttachManager) Attach(app *defines.Meta) {
 			Stdout:       true,
 			Stderr:       true,
 			Stream:       true,
-			Success:      success,
 		})
 		outwr.Close()
 		errwr.Close()
 		logs.Debug("Lenz Attach", app.ID[:12], "finished")
 		if err != nil {
-			close(success)
-			failure <- err
+			logs.Debug("Lenz Attach", app.ID, "failure:", err)
 		}
 		m.send(&defines.AttachEvent{Type: "detach", App: app})
 		m.Lock()
 		defer m.Unlock()
 		delete(m.attached, app.ID)
 	}()
-	_, ok := <-success
-	if ok {
-		m.Lock()
-		m.attached[app.ID] = NewLogPump(outrd, errrd, app)
-		m.Unlock()
-		success <- struct{}{}
-		m.send(&defines.AttachEvent{Type: "attach", App: app})
-		logs.Debug("Lenz Attach", app.ID[:12], "success")
-		return
-	}
-	logs.Debug("Lenz Attach", app.ID, "failure:", <-failure)
+	m.Lock()
+	m.attached[app.ID] = NewLogPump(outrd, errrd, app)
+	m.Unlock()
+	m.send(&defines.AttachEvent{Type: "attach", App: app})
+	logs.Debug("Lenz Attach", app.ID[:12], "success")
 }
 
 func (m *AttachManager) send(event *defines.AttachEvent) {
