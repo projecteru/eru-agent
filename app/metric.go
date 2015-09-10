@@ -15,6 +15,7 @@ import (
 )
 
 func (self *EruApp) InitMetric() bool {
+	fmt.Println("xxxxxxxxxx", self.Meta.Pid)
 	var err error
 	if self.Exec, err = g.Docker.CreateExec(
 		docker.CreateExecOptions{

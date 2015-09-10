@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -10,6 +11,7 @@ import (
 	"github.com/HunanTV/eru-agent/g"
 	"github.com/HunanTV/eru-agent/logs"
 	"github.com/HunanTV/eru-agent/utils"
+	"github.com/fsouza/go-dockerclient"
 )
 
 type EruApp struct {
@@ -17,15 +19,15 @@ type EruApp struct {
 	defines.Metric
 }
 
-func NewEruApp(ID, containerName string, extend map[string]interface{}) *EruApp {
-	name, entrypoint, ident := utils.GetAppInfo(containerName)
+func NewEruApp(container *docker.Container, extend map[string]interface{}) *EruApp {
+	name, entrypoint, ident := utils.GetAppInfo(container.Name)
 	if name == "" {
-		logs.Info("Container name invaild", containerName)
+		logs.Info("Container name invaild", container.Name)
 		return nil
 	}
 	logs.Debug("Eru App", name, entrypoint, ident)
 
-	transfer, _ := g.Transfers.Get(ID, 0)
+	transfer, _ := g.Transfers.Get(container.ID, 0)
 	client := defines.SingleConnRpcClient{
 		RpcServer: transfer,
 		Timeout:   time.Duration(g.Config.Metrics.Timeout) * time.Millisecond,
@@ -33,7 +35,7 @@ func NewEruApp(ID, containerName string, extend map[string]interface{}) *EruApp 
 	step := time.Duration(g.Config.Metrics.Step) * time.Second
 
 	extend["hostname"] = g.Config.HostName
-	extend["cid"] = ID[:12]
+	extend["cid"] = container.ID[:12]
 	extend["ident"] = ident
 	tag := []string{}
 	for k, v := range extend {
@@ -41,8 +43,9 @@ func NewEruApp(ID, containerName string, extend map[string]interface{}) *EruApp 
 	}
 	endpoint := fmt.Sprintf("%s-%s", name, entrypoint)
 
+	pid := strconv.Itoa(container.State.Pid)
 	eruApp := &EruApp{
-		defines.Meta{ID, name, entrypoint, ident, extend},
+		defines.Meta{container.ID, pid, name, entrypoint, ident, extend},
 		defines.Metric{Step: step, Client: client, Tag: strings.Join(tag, ","), Endpoint: endpoint},
 	}
 

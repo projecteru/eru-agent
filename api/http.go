@@ -122,7 +122,7 @@ func addNewContainer(req *Request) (int, interface{}) {
 			logs.Info("API status inspect docker failed", err)
 			break
 		}
-		if eruApp := app.NewEruApp(container.ID, container.Name, data.Meta); eruApp != nil {
+		if eruApp := app.NewEruApp(container, data.Meta); eruApp != nil {
 			lenz.Attacher.Attach(&eruApp.Meta)
 			app.Add(eruApp)
 		}
