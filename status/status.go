@@ -22,7 +22,7 @@ func InitStatus() {
 	logs.Info("Status initiated")
 }
 
-func Load() {
+func load() {
 	containers, err := g.Docker.ListContainers(docker.ListContainersOptions{All: true})
 	if err != nil {
 		logs.Assert(err, "List containers")
@@ -63,7 +63,14 @@ func Load() {
 			logs.Info("Status load failed", err)
 			continue
 		}
-		if eruApp := app.NewEruApp(container.ID, container.Names[0], meta); eruApp != nil {
+
+		c, err := g.Docker.InspectContainer(container.ID)
+		if err != nil {
+			logs.Info("Status inspect docker failed", err)
+			continue
+		}
+
+		if eruApp := app.NewEruApp(c, meta); eruApp != nil {
 			lenz.Attacher.Attach(&eruApp.Meta)
 			app.Add(eruApp)
 			reportContainerCure(container.ID)
@@ -71,9 +78,10 @@ func Load() {
 	}
 }
 
-func StartMonitor() {
+func Start() {
 	logs.Info("Status monitor start")
 	go monitor()
+	load()
 }
 
 func monitor() {
@@ -92,7 +100,7 @@ func monitor() {
 					logs.Info("Status inspect docker failed", err)
 					break
 				}
-				eruApp := app.NewEruApp(event.ID, container.Name, meta)
+				eruApp := app.NewEruApp(container, meta)
 				if eruApp == nil {
 					logs.Info("Create EruApp failed")
 					break

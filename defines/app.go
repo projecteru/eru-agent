@@ -2,6 +2,7 @@ package defines
 
 type Meta struct {
 	ID         string
+	Pid        string
 	Name       string
 	EntryPoint string
 	Ident      string

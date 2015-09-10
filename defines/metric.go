@@ -1,19 +1,13 @@
 package defines
 
-import (
-	"time"
-
-	"github.com/fsouza/go-dockerclient"
-)
+import "time"
 
 type Metric struct {
 	Step     time.Duration
 	Client   SingleConnRpcClient
 	Tag      string
 	Endpoint string
-
-	Last time.Time
-	Exec *docker.Exec
+	Last     time.Time
 
 	Stop chan bool
 	Info map[string]uint64

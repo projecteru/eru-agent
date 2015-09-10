@@ -131,7 +131,7 @@ func statusWatcher() {
 				logs.Info("API status load failed", err)
 				break
 			}
-			if eruApp := app.NewEruApp(container.ID, container.Name, meta); eruApp != nil {
+			if eruApp := app.NewEruApp(container, meta); eruApp != nil {
 				lenz.Attacher.Attach(&eruApp.Meta)
 				app.Add(eruApp)
 			}
