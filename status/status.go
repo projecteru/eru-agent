@@ -22,7 +22,7 @@ func InitStatus() {
 	logs.Info("Status initiated")
 }
 
-func Load() {
+func load() {
 	containers, err := g.Docker.ListContainers(docker.ListContainersOptions{All: true})
 	if err != nil {
 		logs.Assert(err, "List containers")
@@ -78,9 +78,10 @@ func Load() {
 	}
 }
 
-func StartMonitor() {
+func Start() {
 	logs.Info("Status monitor start")
 	go monitor()
+	load()
 }
 
 func monitor() {

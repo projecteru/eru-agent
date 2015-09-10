@@ -31,8 +31,7 @@ func main() {
 	defer os.Remove(g.Config.PidFile)
 
 	api.Serve()
-	status.Load()
-	status.StartMonitor()
+	status.Start()
 	health.Check()
 	app.Limit()
 

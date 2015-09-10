@@ -80,7 +80,7 @@ func (self *EruApp) updateStats() bool {
 
 	network, err := GetNetStats(self)
 	if err != nil {
-		logs.Info("Get net stats failed", err)
+		logs.Info("Get net stats failed", self.ID[:12], err)
 		return false
 	}
 	for k, d := range network {
