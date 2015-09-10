@@ -5,11 +5,14 @@ import (
 	"fmt"
 	"os/exec"
 	"strings"
+
+	"github.com/HunanTV/eru-agent/common"
+	"github.com/HunanTV/eru-agent/logs"
 )
 
 func GetNetStats(app *EruApp) (map[string]uint64, error) {
 	result := map[string]uint64{}
-	cmd := exec.Command("nsenter", "-t", pid, "-n", "cat", "/proc/net/dev")
+	cmd := exec.Command("nsenter", "-t", app.Meta.Pid, "-n", "cat", "/proc/net/dev")
 
 	outr, err := cmd.StdoutPipe()
 	if err != nil {
