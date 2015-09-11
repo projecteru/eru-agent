@@ -41,7 +41,6 @@ func (self *EruApp) Report() {
 				}
 				if !upOk {
 					logs.Info("Update mertic failed", self.Meta.ID[:12])
-					self.Exit()
 					return
 				}
 				self.calcRate(now)
