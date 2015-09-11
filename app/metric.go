@@ -14,6 +14,7 @@ import (
 
 func (self *EruApp) InitMetric() bool {
 	if !self.updateStats() {
+		logs.Info("Init mertics failed", self.Meta.ID[:12])
 		return false
 	}
 	self.Last = time.Now()
@@ -23,6 +24,7 @@ func (self *EruApp) InitMetric() bool {
 
 func (self *EruApp) Exit() {
 	self.Stop <- true
+	close(self.Stop)
 }
 
 func (self *EruApp) Report() {
@@ -38,6 +40,7 @@ func (self *EruApp) Report() {
 					limitChan <- SoftLimit{upOk, self.ID, self.Info}
 				}
 				if !upOk {
+					logs.Info("Update mertic failed", self.Meta.ID[:12])
 					return
 				}
 				self.calcRate(now)
