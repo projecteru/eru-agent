@@ -68,6 +68,7 @@ func (self *EruApp) updateStats() bool {
 		}
 	case <-time.After(common.STATS_FORCE_DONE * time.Second):
 		doneChan <- true
+		return false
 	}
 
 	self.Info["cpu_user"] = stats.CPUStats.CPUUsage.UsageInUsermode
