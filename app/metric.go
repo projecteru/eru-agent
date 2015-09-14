@@ -85,13 +85,9 @@ func (self *EruApp) updateStats() (map[string]uint64, bool) {
 	info["mem_max_usage"] = stats.MemoryStats.MaxUsage
 	info["mem_rss"] = stats.MemoryStats.Stats.Rss
 
-	network, err := GetNetStats(self)
-	if err != nil {
+	if err := GetNetStats(self.Meta.Pid, info); err != nil {
 		logs.Info("Get net stats failed", self.ID[:12], err)
 		return info, false
-	}
-	for k, d := range network {
-		info[k] = d
 	}
 	return info, true
 }
