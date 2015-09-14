@@ -13,12 +13,13 @@ import (
 )
 
 func (self *EruApp) InitMetric() bool {
-	if !self.updateStats() {
+	info, upOk := self.updateStats()
+	if !upOk {
 		logs.Info("Init mertics failed", self.Meta.ID[:12])
 		return false
 	}
 	self.Last = time.Now()
-	self.saveLast()
+	self.saveLast(info)
 	return true
 }
 
@@ -35,17 +36,18 @@ func (self *EruApp) Report() {
 		select {
 		case now := <-time.Tick(self.Step):
 			go func() {
-				upOk := self.updateStats()
+				info, upOk := self.updateStats()
 				if isLimit {
-					limitChan <- SoftLimit{upOk, self.ID, self.Info}
+					limitChan <- SoftLimit{upOk, self.ID, info}
 				}
 				if !upOk {
 					logs.Info("Update mertic failed", self.Meta.ID[:12])
 					return
 				}
-				self.calcRate(now)
+				rate := self.calcRate(info, now)
+				self.saveLast(info)
 				// for safe
-				go self.send(self.Rate)
+				go self.send(rate)
 			}()
 		case <-self.Stop:
 			return
@@ -53,7 +55,8 @@ func (self *EruApp) Report() {
 	}
 }
 
-func (self *EruApp) updateStats() bool {
+func (self *EruApp) updateStats() (map[string]uint64, bool) {
+	info := map[string]uint64{}
 	statsChan := make(chan *docker.Stats)
 	doneChan := make(chan bool)
 	opt := docker.StatsOptions{self.ID, statsChan, false, doneChan, time.Duration(common.STATS_TIMEOUT * time.Second)}
@@ -67,55 +70,56 @@ func (self *EruApp) updateStats() bool {
 	select {
 	case stats = <-statsChan:
 		if stats == nil {
-			return false
+			return info, false
 		}
 	case <-time.After(common.STATS_FORCE_DONE * time.Second):
 		doneChan <- true
-		return false
+		return info, false
 	}
 
-	self.Info["cpu_user"] = stats.CPUStats.CPUUsage.UsageInUsermode
-	self.Info["cpu_system"] = stats.CPUStats.CPUUsage.UsageInKernelmode
-	self.Info["cpu_usage"] = stats.CPUStats.CPUUsage.TotalUsage
+	info["cpu_user"] = stats.CPUStats.CPUUsage.UsageInUsermode
+	info["cpu_system"] = stats.CPUStats.CPUUsage.UsageInKernelmode
+	info["cpu_usage"] = stats.CPUStats.CPUUsage.TotalUsage
 	//FIXME in container it will get all CPUStats
-	self.Info["mem_usage"] = stats.MemoryStats.Usage
-	self.Info["mem_max_usage"] = stats.MemoryStats.MaxUsage
-	self.Info["mem_rss"] = stats.MemoryStats.Stats.Rss
+	info["mem_usage"] = stats.MemoryStats.Usage
+	info["mem_max_usage"] = stats.MemoryStats.MaxUsage
+	info["mem_rss"] = stats.MemoryStats.Stats.Rss
 
 	network, err := GetNetStats(self)
 	if err != nil {
 		logs.Info("Get net stats failed", self.ID[:12], err)
-		return false
+		return info, false
 	}
 	for k, d := range network {
-		self.Info[k] = d
+		info[k] = d
 	}
-	return true
+	return info, true
 }
 
-func (self *EruApp) saveLast() {
-	for k, d := range self.Info {
+func (self *EruApp) saveLast(info map[string]uint64) {
+	self.Save = map[string]uint64{}
+	for k, d := range info {
 		self.Save[k] = d
 	}
-	self.Info = map[string]uint64{}
 }
 
-func (self *EruApp) calcRate(now time.Time) {
+func (self *EruApp) calcRate(info map[string]uint64, now time.Time) (rate map[string]float64) {
+	rate = map[string]float64{}
 	delta := now.Sub(self.Last)
 	nano_t := float64(delta.Nanoseconds())
 	second_t := delta.Seconds()
-	for k, d := range self.Info {
+	for k, d := range info {
 		switch {
 		case strings.HasPrefix(k, "cpu_") && d >= self.Save[k]:
-			self.Rate[fmt.Sprintf("%s_rate", k)] = float64(d-self.Save[k]) / nano_t
+			rate[fmt.Sprintf("%s_rate", k)] = float64(d-self.Save[k]) / nano_t
 		case strings.HasPrefix(k, common.VLAN_PREFIX) && d >= self.Save[k]:
-			self.Rate[fmt.Sprintf("%s.rate", k)] = float64(d-self.Save[k]) / second_t
+			rate[fmt.Sprintf("%s.rate", k)] = float64(d-self.Save[k]) / second_t
 		case strings.HasPrefix(k, "mem"):
-			self.Rate[k] = float64(d)
+			rate[k] = float64(d)
 		}
 	}
 	self.Last = now
-	self.saveLast()
+	return
 }
 
 func (self *EruApp) send(rate map[string]float64) {

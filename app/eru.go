@@ -50,10 +50,6 @@ func NewEruApp(container *docker.Container, extend map[string]interface{}) *EruA
 	}
 
 	eruApp.Stop = make(chan bool)
-	eruApp.Info = map[string]uint64{}
-	eruApp.Save = map[string]uint64{}
-	eruApp.Rate = map[string]float64{}
-
 	return eruApp
 }
 
