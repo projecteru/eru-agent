@@ -10,7 +10,5 @@ type Metric struct {
 	Last     time.Time
 
 	Stop chan bool
-	Info map[string]uint64
 	Save map[string]uint64
-	Rate map[string]float64
 }

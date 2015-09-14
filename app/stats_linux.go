@@ -10,13 +10,13 @@ import (
 	"github.com/HunanTV/eru-agent/logs"
 )
 
-func GetNetStats(app *EruApp) (map[string]uint64, error) {
-	result := map[string]uint64{}
+func GetNetStats(app *EruApp) (result map[string]uint64, err error) {
+	result = map[string]uint64{}
 	cmd := exec.Command("nsenter", "-t", app.Meta.Pid, "-n", "cat", "/proc/net/dev")
 
 	outr, err := cmd.StdoutPipe()
 	if err != nil {
-		return result, err
+		return
 	}
 	//FIXME ignore stderr
 
@@ -52,8 +52,8 @@ func GetNetStats(app *EruApp) (map[string]uint64, error) {
 		}
 	}()
 	if err = cmd.Wait(); err != nil {
-		return result, err
+		return
 	}
 	logs.Debug("Container net status", result)
-	return result, nil
+	return
 }
