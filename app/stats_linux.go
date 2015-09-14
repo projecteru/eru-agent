@@ -10,9 +10,8 @@ import (
 	"github.com/HunanTV/eru-agent/logs"
 )
 
-func GetNetStats(app *EruApp) (result map[string]uint64, err error) {
-	result = map[string]uint64{}
-	cmd := exec.Command("nsenter", "-t", app.Meta.Pid, "-n", "cat", "/proc/net/dev")
+func GetNetStats(pid string, result map[string]uint64) (err error) {
+	cmd := exec.Command("nsenter", "-t", pid, "-n", "cat", "/proc/net/dev")
 
 	outr, err := cmd.StdoutPipe()
 	if err != nil {

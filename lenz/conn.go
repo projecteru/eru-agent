@@ -41,7 +41,7 @@ func NewUpStream(addr string) (up *UpStream, err error) {
 			if up.count < g.Config.Lenz.Count {
 				return nil
 			}
-			logs.Debug("Streamer buffer full, send to remote")
+			//logs.Debug("Streamer buffer full, send to remote")
 			return up.Flush()
 		}
 	} else {
