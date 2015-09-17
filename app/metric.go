@@ -108,7 +108,7 @@ func (self *EruApp) calcRate(info map[string]uint64, now time.Time) (rate map[st
 		switch {
 		case strings.HasPrefix(k, "cpu_") && d >= self.Save[k]:
 			rate[fmt.Sprintf("%s_rate", k)] = float64(d-self.Save[k]) / nano_t
-		case strings.HasPrefix(k, common.VLAN_PREFIX) && d >= self.Save[k]:
+		case (strings.HasPrefix(k, common.VLAN_PREFIX) || strings.HasPrefix(k, common.DEFAULT_BR)) && d >= self.Save[k]:
 			rate[fmt.Sprintf("%s.rate", k)] = float64(d-self.Save[k]) / second_t
 		case strings.HasPrefix(k, "mem"):
 			rate[k] = float64(d)
