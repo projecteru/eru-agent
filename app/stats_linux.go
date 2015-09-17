@@ -31,7 +31,8 @@ func GetNetStats(pid string, result map[string]uint64) (err error) {
 		}
 		ts := strings.Split(text, ":")
 		fmt.Sscanf(ts[0], "%s", &name)
-		if !strings.HasPrefix(name, common.VLAN_PREFIX) {
+		if !strings.HasPrefix(name, common.VLAN_PREFIX) ||
+			name != common.DEFAULT_BR {
 			continue
 		}
 		fmt.Sscanf(ts[1],
