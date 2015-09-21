@@ -1,16 +1,15 @@
 package network
 
 import (
-	"net"
 	"runtime"
 
 	"github.com/HunanTV/eru-agent/g"
 	"github.com/HunanTV/eru-agent/logs"
-	"github.com/docker/libcontainer/netlink"
 	"github.com/krhubert/netns"
+	"github.com/vishvananda/netlink"
 )
 
-func setUpVLan(cid, vethName, ips string, pid int) bool {
+func setUpVLan(cid, ips string, pid int, veth netlink.Link) bool {
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 
@@ -31,20 +30,22 @@ func setUpVLan(cid, vethName, ips string, pid int) bool {
 	defer ns.Close()
 	defer netns.Set(origns)
 
-	ip, ipNet, err := net.ParseCIDR(ips)
+	addr, err := netlink.ParseAddr(ips)
 	if err != nil {
 		logs.Info("Parse CIDR failed", err)
 		return false
 	}
 
-	ifc, err := net.InterfaceByName(vethName)
-	if err != nil {
-		logs.Info("Get container vlan failed", err)
+	if err := netlink.AddrAdd(veth, addr); err != nil {
+		logs.Info("Add addr to veth failed", err)
 		return false
 	}
 
-	netlink.NetworkLinkAddIp(ifc, ip, ipNet)
-	netlink.NetworkLinkUp(ifc)
+	if err := netlink.LinkSetUp(veth); err != nil {
+		logs.Info("Setup veth failed", err)
+		return false
+	}
+
 	logs.Info("Add vlan device success", cid[:12])
 	return true
 }
@@ -61,17 +62,27 @@ func AddVLan(vethName, ips, cid string) bool {
 		return false
 	}
 
-	if err := netlink.NetworkLinkAddMacVlan(device, vethName, "bridge"); err != nil {
+	parent, err := netlink.LinkByName(device)
+	if err != nil {
+		logs.Info("Get parent NIC failed", err)
+		return false
+	}
+
+	veth := &netlink.Macvlan{
+		LinkAttrs: netlink.LinkAttrs{Name: vethName, ParentIndex: parent.Attrs().Index},
+		Mode:      netlink.MACVLAN_MODE_BRIDGE,
+	}
+
+	if err := netlink.LinkAdd(veth); err != nil {
 		logs.Info("Create macvlan device failed", err)
 		return false
 	}
 
-	ifc, _ := net.InterfaceByName(vethName)
-	if err := netlink.NetworkSetNsPid(ifc, container.State.Pid); err != nil {
+	if err := netlink.LinkSetNsPid(veth, container.State.Pid); err != nil {
 		logs.Info("Set macvlan device into container failed", err)
-		delVLan(vethName)
+		delVLan(veth)
 		return false
 	}
 
-	return setUpVLan(cid, vethName, ips, container.State.Pid)
+	return setUpVLan(cid, ips, container.State.Pid, veth)
 }

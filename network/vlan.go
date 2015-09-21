@@ -6,7 +6,7 @@ import (
 	"github.com/CMGS/consistent"
 	"github.com/HunanTV/eru-agent/g"
 	"github.com/HunanTV/eru-agent/logs"
-	"github.com/docker/libcontainer/netlink"
+	"github.com/vishvananda/netlink"
 )
 
 var Devices *consistent.Consistent
@@ -20,8 +20,8 @@ func InitVlan() {
 	logs.Info("Vlan initiated")
 }
 
-func delVLan(vethName string) {
-	if err := netlink.NetworkLinkDel(vethName); err != nil {
+func delVLan(link netlink.Link) {
+	if err := netlink.LinkDel(link); err != nil {
 		logs.Debug("Delete device failed", err)
 	}
 }
