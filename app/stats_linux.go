@@ -4,33 +4,14 @@ import (
 	"bufio"
 	"fmt"
 	"os"
-	"runtime"
 	"strings"
 
 	"github.com/HunanTV/eru-agent/common"
 	"github.com/HunanTV/eru-agent/logs"
-	"github.com/krhubert/netns"
 )
 
 func GetNetStats(pid int, result map[string]uint64) (err error) {
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
-	origns, err := netns.Get()
-	if err != nil {
-		return
-	}
-	defer origns.Close()
-
-	ns, err := netns.GetFromPid(pid)
-	if err != nil {
-		return
-	}
-	netns.Set(ns)
-	defer ns.Close()
-	defer netns.Set(origns)
-
-	statFile, err := os.Open("/proc/net/dev")
+	statFile, err := os.Open(fmt.Sprintf("/proc/%d/net/dev", pid))
 	if err != nil {
 		return
 	}
