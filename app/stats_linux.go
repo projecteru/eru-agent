@@ -3,24 +3,40 @@ package app
 import (
 	"bufio"
 	"fmt"
-	"os/exec"
+	"os"
+	"runtime"
 	"strings"
 
 	"github.com/HunanTV/eru-agent/common"
 	"github.com/HunanTV/eru-agent/logs"
+	"github.com/krhubert/netns"
 )
 
-func GetNetStats(pid string, result map[string]uint64) (err error) {
-	cmd := exec.Command("nsenter", "-t", pid, "-n", "cat", "/proc/net/dev")
+func GetNetStats(pid int, result map[string]uint64) (err error) {
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
 
-	outr, err := cmd.StdoutPipe()
+	origns, err := netns.Get()
 	if err != nil {
 		return
 	}
-	//FIXME ignore stderr
+	defer origns.Close()
 
-	cmd.Start()
-	s := bufio.NewScanner(outr)
+	ns, err := netns.GetFromPid(pid)
+	if err != nil {
+		return
+	}
+	netns.Set(ns)
+	defer ns.Close()
+	defer netns.Set(origns)
+
+	statFile, err := os.Open("/proc/net/dev")
+	if err != nil {
+		return
+	}
+	defer statFile.Close()
+
+	s := bufio.NewScanner(statFile)
 	var d uint64
 	for s.Scan() {
 		var name string
@@ -49,7 +65,6 @@ func GetNetStats(pid string, result map[string]uint64) (err error) {
 		result[name+".outerrs"] = n[6]
 		result[name+".outdrop"] = n[7]
 	}
-	err = cmd.Wait()
 	logs.Debug("Container net status", result)
 	return
 }

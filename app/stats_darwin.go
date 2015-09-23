@@ -1,5 +1,5 @@
 package app
 
-func GetNetStats(pid string, info map[string]uint64) (err error) {
+func GetNetStats(pid int, info map[string]uint64) (err error) {
 	return
 }
