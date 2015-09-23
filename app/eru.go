@@ -2,7 +2,6 @@ package app
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -43,9 +42,8 @@ func NewEruApp(container *docker.Container, extend map[string]interface{}) *EruA
 	}
 	endpoint := fmt.Sprintf("%s-%s", name, entrypoint)
 
-	pid := strconv.Itoa(container.State.Pid)
 	eruApp := &EruApp{
-		defines.Meta{container.ID, pid, name, entrypoint, ident, extend},
+		defines.Meta{container.ID, container.State.Pid, name, entrypoint, ident, extend},
 		defines.Metric{Step: step, Client: client, Tag: strings.Join(tag, ","), Endpoint: endpoint},
 	}
 

@@ -3,24 +3,21 @@ package app
 import (
 	"bufio"
 	"fmt"
-	"os/exec"
+	"os"
 	"strings"
 
 	"github.com/HunanTV/eru-agent/common"
 	"github.com/HunanTV/eru-agent/logs"
 )
 
-func GetNetStats(pid string, result map[string]uint64) (err error) {
-	cmd := exec.Command("nsenter", "-t", pid, "-n", "cat", "/proc/net/dev")
-
-	outr, err := cmd.StdoutPipe()
+func GetNetStats(pid int, result map[string]uint64) (err error) {
+	statFile, err := os.Open(fmt.Sprintf("/proc/%d/net/dev", pid))
 	if err != nil {
 		return
 	}
-	//FIXME ignore stderr
+	defer statFile.Close()
 
-	cmd.Start()
-	s := bufio.NewScanner(outr)
+	s := bufio.NewScanner(statFile)
 	var d uint64
 	for s.Scan() {
 		var name string
@@ -49,7 +46,6 @@ func GetNetStats(pid string, result map[string]uint64) (err error) {
 		result[name+".outerrs"] = n[6]
 		result[name+".outdrop"] = n[7]
 	}
-	err = cmd.Wait()
 	logs.Debug("Container net status", result)
 	return
 }
