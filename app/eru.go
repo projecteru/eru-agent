@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -16,6 +17,7 @@ import (
 type EruApp struct {
 	defines.Meta
 	defines.Metric
+	statFile *os.File
 }
 
 func NewEruApp(container *docker.Container, extend map[string]interface{}) *EruApp {
@@ -45,6 +47,7 @@ func NewEruApp(container *docker.Container, extend map[string]interface{}) *EruA
 	eruApp := &EruApp{
 		defines.Meta{container.ID, container.State.Pid, name, entrypoint, ident, extend},
 		defines.Metric{Step: step, Client: client, Tag: strings.Join(tag, ","), Endpoint: endpoint},
+		nil,
 	}
 
 	eruApp.Stop = make(chan bool)

@@ -1,5 +1,7 @@
 package app
 
-func GetNetStats(pid int, info map[string]uint64) (err error) {
+import "os"
+
+func GetNetStats(statFile *os.File, info map[string]uint64) (err error) {
 	return
 }

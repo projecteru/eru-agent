@@ -10,14 +10,9 @@ import (
 	"github.com/HunanTV/eru-agent/logs"
 )
 
-func GetNetStats(pid int, result map[string]uint64) (err error) {
-	statFile, err := os.Open(fmt.Sprintf("/proc/%d/net/dev", pid))
-	if err != nil {
-		return
-	}
-	defer statFile.Close()
-
+func GetNetStats(statFile *os.File, result map[string]uint64) (err error) {
 	s := bufio.NewScanner(statFile)
+	defer statFile.Seek(0, 0)
 	var d uint64
 	for s.Scan() {
 		var name string

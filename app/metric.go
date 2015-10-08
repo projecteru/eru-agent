@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -13,6 +14,11 @@ import (
 )
 
 func (self *EruApp) InitMetric() bool {
+	var err error
+	if self.statFile, err = os.Open(fmt.Sprintf("/proc/%d/net/dev", self.Meta.Pid)); err != nil {
+		logs.Info("Open net stats failed", self.Meta.ID[:12])
+		return false
+	}
 	info, upOk := self.updateStats()
 	if !upOk {
 		logs.Info("Init mertics failed", self.Meta.ID[:12])
@@ -24,6 +30,7 @@ func (self *EruApp) InitMetric() bool {
 }
 
 func (self *EruApp) Exit() {
+	defer self.statFile.Close()
 	self.Stop <- true
 	close(self.Stop)
 }
@@ -85,7 +92,7 @@ func (self *EruApp) updateStats() (map[string]uint64, bool) {
 	info["mem_max_usage"] = stats.MemoryStats.MaxUsage
 	info["mem_rss"] = stats.MemoryStats.Stats.Rss
 
-	if err := GetNetStats(self.Meta.Pid, info); err != nil {
+	if err := GetNetStats(self.statFile, info); err != nil {
 		logs.Info("Get net stats failed", self.ID[:12], err)
 		return info, false
 	}
