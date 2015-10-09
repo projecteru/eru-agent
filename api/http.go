@@ -77,6 +77,114 @@ func addVlanForContainer(req *Request) (int, interface{}) {
 	return http.StatusOK, JSON{"message": "ok"}
 }
 
+// URL POST /api/calico/node/
+func startCalicoNode(req *Request) (int, interface{}) {
+	if network.StartCalicoNode() {
+		return http.StatusCreated, JSON{"message": "create successful"}
+	} else {
+		return http.StatusBadRequest, JSON{"message": "calico node start fail"}
+	}
+}
+
+// URL DELETE /api/calico/node/
+func stopCalicoNode(req *Request) (int, interface{}) {
+	if network.StopCalicoNode() {
+		return http.StatusAccepted, JSON{"message": "stopn successful"}
+	} else {
+		return http.StatusBadRequest, JSON{"message": "calico node stop fail"}
+	}
+}
+
+//URL POST /api/calico/container/:container_id/
+func addContainerToCalicoNet(req *Request) (int, interface{}) {
+	type Data struct {
+		IPAddr string `json:"ip_addr"`
+	}
+
+	container_id := req.URL.Query().Get(":container_id")
+
+	logs.Debug("Request", req)
+	logs.Debug("body", req.Body)
+	data := &Data{}
+	decoder := json.NewDecoder(req.Body)
+	err := decoder.Decode(data)
+	if err != nil {
+		return http.StatusBadRequest, JSON{"message": "wrong JSON format"}
+	}
+	logs.Debug("received json: ", data)
+	if network.AddContaienrToCalicoNet(container_id, data.IPAddr) {
+		return http.StatusCreated, JSON{"message": "add container to calico success"}
+	} else {
+		return http.StatusBadRequest, JSON{"message": "add container to calico fail"}
+	}
+}
+
+//URL DELETE /api/calico/container/:container_id/
+func deleteContainerFromCalicoNet(req *Request) (int, interface{}) {
+	container_id := req.URL.Query().Get(":container_id")
+
+	if network.RemoveContainerFromCalicoNet(container_id) {
+		return http.StatusAccepted, JSON{"message": "remove container to calico success"}
+	} else {
+		return http.StatusBadRequest, JSON{"message": "remove container to calico fail"}
+	}
+}
+
+//URL GET /api/calico/container/:container_id/endpoint/
+func showEndPointForContainer(req *Request) (int, interface{}) {
+	container_id := req.URL.Query().Get(":container_id")
+	out, err := network.ShowContainerEndPointId(container_id)
+	if err != nil {
+		logs.Debug("get container's endpoint id fail", err)
+		return http.StatusNotFound, JSON{"message": err.Error()}
+	}
+	return http.StatusOK, JSON{"endpoint_id": out}
+}
+
+//URL POST /api/calico/containerip/:container_id/
+func addIPToContainer(req *Request) (int, interface{}) {
+	type Data struct {
+		IPAddr string `json:"ip_addr"`
+	}
+
+	container_id := req.URL.Query().Get(":container_id")
+
+	data := &Data{}
+	decoder := json.NewDecoder(req.Body)
+	err := decoder.Decode(data)
+	if err != nil {
+		return http.StatusBadRequest, JSON{"message": "wrong JSON format"}
+	}
+
+	if network.ContaienrIP(container_id, "add", data.IPAddr) {
+		return http.StatusCreated, JSON{"message": "create ip success"}
+	} else {
+		return http.StatusBadRequest, JSON{"message": "create ip to container fail"}
+	}
+}
+
+//URL DELETE /api/calico/containerip/:container_id/
+func removeIPFromContainer(req *Request) (int, interface{}) {
+	type Data struct {
+		IPAddr string `json:"ip_addr"`
+	}
+
+	container_id := req.URL.Query().Get(":container_id")
+
+	data := &Data{}
+	decoder := json.NewDecoder(req.Body)
+	err := decoder.Decode(data)
+	if err != nil {
+		return http.StatusBadRequest, JSON{"message": "wrong JSON format"}
+	}
+
+	if network.ContaienrIP(container_id, "remove", data.IPAddr) {
+		return http.StatusCreated, JSON{"message": "create ip success"}
+	} else {
+		return http.StatusBadRequest, JSON{"message": "create ip to container fail"}
+	}
+}
+
 // URL /api/container/:container_id/setroute/
 func setRouteForContainer(req *Request) (int, interface{}) {
 	type Gateway struct {
@@ -135,14 +243,23 @@ func HTTPServe() {
 
 	handlers := map[string]map[string]func(*Request) (int, interface{}){
 		"GET": {
-			"/profile/":      profile,
-			"/version/":      version,
-			"/api/app/list/": listEruApps,
+			"/profile/":                                     profile,
+			"/version/":                                     version,
+			"/api/app/list/":                                listEruApps,
+			"/api/calico/container/:container_id/endpoint/": showEndPointForContainer,
 		},
 		"POST": {
 			"/api/container/add/":                    addNewContainer,
 			"/api/container/:container_id/addvlan/":  addVlanForContainer,
 			"/api/container/:container_id/setroute/": setRouteForContainer,
+			"/api/calico/node/":                      startCalicoNode,
+			"/api/calico/container/:container_id/":   addContainerToCalicoNet,
+			"/api/calico/containerip/:container_id/": addIPToContainer,
+		},
+		"DELETE": {
+			"/api/calico/node/":                      stopCalicoNode,
+			"/api/calico/container/:container_id/":   deleteContainerFromCalicoNet,
+			"/api/calico/containerip/:container_id/": removeIPFromContainer,
 		},
 	}
 

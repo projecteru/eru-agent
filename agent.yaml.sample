@@ -40,3 +40,7 @@ api:
   http: true
   pubsub: true
   addr: 0.0.0.0:12345
+
+calico:
+  node_ip: 10.200.8.35
+  node_image: calico/node:latest

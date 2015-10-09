@@ -46,6 +46,11 @@ type LimitConfig struct {
 	Memory uint64
 }
 
+type CalicoConfig struct {
+	NodeIP    string `yaml:"node_ip"`
+	NodeImage string `yaml:"node_image"`
+}
+
 type AgentConfig struct {
 	HostName string `yaml:"hostname"`
 	PidFile  string
@@ -58,4 +63,5 @@ type AgentConfig struct {
 	Redis   RedisConfig
 	API     APIConfig
 	Limit   LimitConfig
+	Calico  CalicoConfig
 }
