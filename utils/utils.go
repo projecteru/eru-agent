@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"strconv"
 	"strings"
@@ -12,6 +13,17 @@ import (
 	"github.com/HunanTV/eru-agent/common"
 	"github.com/HunanTV/eru-agent/logs"
 )
+
+var httpClient *http.Client
+
+func init() {
+	httpClient = &http.Client{
+		Transport: &http.Transport{
+			DisableKeepAlives:   true,
+			MaxIdleConnsPerHost: 1,
+		},
+	}
+}
 
 func UrlJoin(strs ...string) string {
 	ss := make([]string, len(strs))
@@ -136,4 +148,24 @@ func Atoi(s string, def int) int {
 	} else {
 		return r
 	}
+}
+
+func DoPut(url string) {
+	req, err := http.NewRequest("PUT", url, nil)
+	if err != nil {
+		logs.Debug("Gen request failed", err)
+		return
+	}
+	response, err := httpClient.Do(req)
+	if err != nil {
+		logs.Debug("Do request failed", err)
+		return
+	}
+	defer response.Body.Close()
+	data, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		logs.Debug("Read response failed", err)
+		return
+	}
+	logs.Debug("Response:", string(data))
 }

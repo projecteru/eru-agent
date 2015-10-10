@@ -2,11 +2,11 @@ package health
 
 import (
 	"fmt"
-	"net/http"
 	"time"
 
 	"github.com/HunanTV/eru-agent/g"
 	"github.com/HunanTV/eru-agent/logs"
+	"github.com/HunanTV/eru-agent/utils"
 )
 
 func Check() {
@@ -18,9 +18,7 @@ func ping() {
 	for _ = range ticker {
 		if err := g.Docker.Ping(); err != nil {
 			url := fmt.Sprintf("%s/api/host/%s/down", g.Config.Eru.Endpoint, g.Config.HostName)
-			client := &http.Client{}
-			req, _ := http.NewRequest("PUT", url, nil)
-			client.Do(req)
+			utils.DoPut(url)
 			logs.Assert(err, "Docker exit")
 		}
 	}
