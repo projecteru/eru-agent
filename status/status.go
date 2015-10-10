@@ -3,7 +3,6 @@ package status
 import (
 	"encoding/json"
 	"fmt"
-	"net/http"
 	"strings"
 
 	"github.com/HunanTV/eru-agent/app"
@@ -11,6 +10,7 @@ import (
 	"github.com/HunanTV/eru-agent/g"
 	"github.com/HunanTV/eru-agent/lenz"
 	"github.com/HunanTV/eru-agent/logs"
+	"github.com/HunanTV/eru-agent/utils"
 	"github.com/fsouza/go-dockerclient"
 	"github.com/keimoon/gore"
 )
@@ -165,16 +165,12 @@ func reportContainerDeath(cid string) {
 	}
 
 	url := fmt.Sprintf("%s/api/container/%s/kill", g.Config.Eru.Endpoint, cid)
-	client := &http.Client{}
-	req, _ := http.NewRequest("PUT", url, nil)
-	client.Do(req)
+	utils.DoPut(url)
 	logs.Debug(cid[:12], "dead, remove from watching list")
 }
 
 func reportContainerCure(cid string) {
 	url := fmt.Sprintf("%s/api/container/%s/cure", g.Config.Eru.Endpoint, cid)
-	client := &http.Client{}
-	req, _ := http.NewRequest("PUT", url, nil)
-	client.Do(req)
+	utils.DoPut(url)
 	logs.Debug(cid[:12], "cured, added in watching list")
 }

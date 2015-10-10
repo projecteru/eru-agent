@@ -20,6 +20,6 @@ func (r *Request) Init() {
 func NewRequest(r *http.Request) *Request {
 	req := &Request{*r, 0, 20}
 	req.Init()
-	logs.Debug(req.Method, req.URL.Path)
+	logs.Debug("HTTP request", req.Method, req.URL.Path)
 	return req
 }
