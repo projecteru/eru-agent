@@ -77,6 +77,26 @@ func addVlanForContainer(req *Request) (int, interface{}) {
 	return http.StatusOK, JSON{"message": "ok"}
 }
 
+// URL /api/container/:container_id/addroute/
+func addRouteForContainer(req *Request) (int, interface{}) {
+	type Entry struct {
+		CIDR      string
+		Interface string
+	}
+	cid := req.URL.Query().Get(":container_id")
+	data := &Entry{}
+
+	decoder := json.NewDecoder(req.Body)
+	if err := decoder.Decode(data); err != nil {
+		return http.StatusBadRequest, JSON{"message": "wrong JSON format"}
+	}
+	if !network.AddRoute(cid, data.CIDR, data.Interface) {
+		logs.Info("Add route failed")
+		return http.StatusServiceUnavailable, JSON{"message": "add route failed"}
+	}
+	return http.StatusOK, JSON{"message": "ok"}
+}
+
 // URL /api/container/:container_id/setroute/
 func setRouteForContainer(req *Request) (int, interface{}) {
 	type Gateway struct {
@@ -143,6 +163,7 @@ func HTTPServe() {
 			"/api/container/add/":                    addNewContainer,
 			"/api/container/:container_id/addvlan/":  addVlanForContainer,
 			"/api/container/:container_id/setroute/": setRouteForContainer,
+			"/api/container/:container_id/addroute/": addRouteForContainer,
 		},
 	}
 
