@@ -14,3 +14,13 @@ func SetDefaultRoute(cid, gateway string) bool {
 	logs.Info("Set default route success", cid, gateway)
 	return true
 }
+
+func AddRoute(cid, CIDR string, ifc string) bool {
+	_, err := g.Docker.InspectContainer(cid)
+	if err != nil {
+		logs.Info("VLanSetter inspect docker failed", err)
+		return false
+	}
+	logs.Info("Add route success", cid, CIDR, ifc)
+	return true
+}
