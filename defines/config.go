@@ -22,6 +22,7 @@ type LenzConfig struct {
 type MetricsConfig struct {
 	Step      int64
 	Timeout   int64
+	Force     int64
 	Transfers []string
 }
 

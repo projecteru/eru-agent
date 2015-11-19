@@ -11,6 +11,7 @@ import (
 	"github.com/HunanTV/eru-agent/g"
 	"github.com/HunanTV/eru-agent/logs"
 	"github.com/HunanTV/eru-agent/utils"
+	"github.com/HunanTV/eru-metric/falcon"
 	"github.com/fsouza/go-dockerclient"
 )
 
@@ -29,10 +30,7 @@ func NewEruApp(container *docker.Container, extend map[string]interface{}) *EruA
 	logs.Debug("Eru App", name, entrypoint, ident)
 
 	transfer, _ := g.Transfers.Get(container.ID, 0)
-	client := defines.SingleConnRpcClient{
-		RpcServer: transfer,
-		Timeout:   time.Duration(g.Config.Metrics.Timeout) * time.Millisecond,
-	}
+	client := falcon.CreateFalconClient(transfer, time.Duration(g.Config.Metrics.Timeout)*time.Millisecond)
 	step := time.Duration(g.Config.Metrics.Step) * time.Second
 
 	extend["hostname"] = g.Config.HostName
