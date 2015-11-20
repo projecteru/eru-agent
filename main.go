@@ -30,10 +30,11 @@ func main() {
 	utils.WritePid(g.Config.PidFile)
 	defer os.Remove(g.Config.PidFile)
 
+	app.Limit()
+	app.Metric()
 	api.Serve()
 	status.Start()
 	health.Check()
-	app.Limit()
 
 	var c = make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)

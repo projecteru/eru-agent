@@ -10,7 +10,6 @@ import (
 )
 
 type SoftLimit struct {
-	flag bool
 	cid  string
 	info map[string]uint64
 }
@@ -31,9 +30,6 @@ func calcMemoryUsage() {
 	for {
 		select {
 		case d := <-limitChan:
-			if !d.flag {
-				logs.Info("Get mem stats failed", d.cid)
-			}
 			if v, ok := d.info["mem_usage"]; ok {
 				usage[d.cid] = v
 			} else {
