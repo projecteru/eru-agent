@@ -12,5 +12,5 @@ func InitTransfers() {
 	for _, transfer := range Config.Metrics.Transfers {
 		Transfers.Add(transfer)
 	}
-	logs.Info("Metrics initiated")
+	logs.Info("Transfers initiated")
 }

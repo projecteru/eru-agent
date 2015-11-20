@@ -2,7 +2,6 @@ package app
 
 import (
 	"fmt"
-	"os"
 	"strings"
 	"sync"
 	"time"
@@ -11,13 +10,14 @@ import (
 	"github.com/HunanTV/eru-agent/g"
 	"github.com/HunanTV/eru-agent/logs"
 	"github.com/HunanTV/eru-agent/utils"
+	"github.com/HunanTV/eru-metric/falcon"
+	"github.com/HunanTV/eru-metric/metric"
 	"github.com/fsouza/go-dockerclient"
 )
 
 type EruApp struct {
 	defines.Meta
-	defines.Metric
-	statFile *os.File
+	metric.Metric
 }
 
 func NewEruApp(container *docker.Container, extend map[string]interface{}) *EruApp {
@@ -29,12 +29,12 @@ func NewEruApp(container *docker.Container, extend map[string]interface{}) *EruA
 	logs.Debug("Eru App", name, entrypoint, ident)
 
 	transfer, _ := g.Transfers.Get(container.ID, 0)
-	client := defines.SingleConnRpcClient{
-		RpcServer: transfer,
-		Timeout:   time.Duration(g.Config.Metrics.Timeout) * time.Millisecond,
-	}
-	step := time.Duration(g.Config.Metrics.Step) * time.Second
+	client := falcon.CreateFalconClient(
+		transfer,
+		time.Duration(g.Config.Metrics.Timeout)*time.Millisecond,
+	)
 
+	step := time.Duration(g.Config.Metrics.Step) * time.Second
 	extend["hostname"] = g.Config.HostName
 	extend["cid"] = container.ID[:12]
 	extend["ident"] = ident
@@ -44,13 +44,9 @@ func NewEruApp(container *docker.Container, extend map[string]interface{}) *EruA
 	}
 	endpoint := fmt.Sprintf("%s-%s", name, entrypoint)
 
-	eruApp := &EruApp{
-		defines.Meta{container.ID, container.State.Pid, name, entrypoint, ident, extend},
-		defines.Metric{Step: step, Client: client, Tag: strings.Join(tag, ","), Endpoint: endpoint},
-		nil,
-	}
-
-	eruApp.Stop = make(chan bool)
+	meta := defines.Meta{container.ID, container.State.Pid, name, entrypoint, ident, extend}
+	metric := metric.CreateMetric(step, client, strings.Join(tag, ","), endpoint)
+	eruApp := &EruApp{meta, metric}
 	return eruApp
 }
 
@@ -64,8 +60,8 @@ func Add(app *EruApp) {
 		// safe add
 		return
 	}
-	if !app.InitMetric() {
-		// not record
+	if err := app.InitMetric(app.ID, app.Pid); err != nil {
+		logs.Info("Init app metric failed", err)
 		return
 	}
 	go app.Report()
