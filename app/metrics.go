@@ -15,15 +15,18 @@ func Metric() {
 		time.Duration(common.STATS_FORCE_DONE),
 		common.VLAN_PREFIX, common.DEFAULT_BR,
 	)
+	logs.Info("Metrics initiated")
 }
 
 func (self *EruApp) Report() {
+	t := time.NewTicker(self.Step)
+	defer t.Stop()
 	defer self.Client.Close()
 	defer logs.Info(self.Name, self.EntryPoint, self.ID[:12], "metrics report stop")
 	logs.Info(self.Name, self.EntryPoint, self.ID[:12], "metrics report start")
 	for {
 		select {
-		case now := <-time.Tick(self.Step):
+		case now := <-t.C:
 			go func() {
 				if info, err := self.UpdateStats(self.ID); err == nil {
 					if isLimit {
