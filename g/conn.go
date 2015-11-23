@@ -8,7 +8,7 @@ import (
 	"github.com/keimoon/gore"
 )
 
-var Docker *defines.DockerWrapper
+var Docker defines.ContainerManager
 var Rds *gore.Pool
 
 func InitialConn() {
