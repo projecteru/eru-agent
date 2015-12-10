@@ -1,4 +1,3 @@
-hostname: 127.0.0.1
 pidfile: /mnt/sda1/tmp/agent.pid
 
 eru:

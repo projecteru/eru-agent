@@ -40,5 +40,9 @@ func load(configPath string) {
 	if err := yaml.Unmarshal(b, &Config); err != nil {
 		logs.Assert(err, "Load config file failed")
 	}
+
+	if Config.HostName, err = os.Hostname(); err != nil {
+		logs.Assert(err, "Load hostname failed")
+	}
 	logs.Debug("Configure:", Config)
 }
