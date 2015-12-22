@@ -15,7 +15,6 @@ import (
 	"github.com/HunanTV/eru-agent/logs"
 	"github.com/HunanTV/eru-agent/network"
 	"github.com/bmizerany/pat"
-	"github.com/keimoon/gore"
 )
 
 // URL /version/
@@ -51,9 +50,12 @@ func addVlanForContainer(req *Request) (int, interface{}) {
 		TaskID string `json:"task_id"`
 		IPs    []IP   `json:"ips"`
 	}
-
-	conn := g.GetRedisConn()
-	defer g.Rds.Release(conn)
+	type Result struct {
+		Succ        int    `json:"succ"`
+		ContainerID string `json:"container_id"`
+		VethName    string `json:"veth"`
+		IP          string `json:"ip"`
+	}
 
 	cid := req.URL.Query().Get(":container_id")
 
@@ -64,17 +66,17 @@ func addVlanForContainer(req *Request) (int, interface{}) {
 		return http.StatusBadRequest, JSON{"message": "wrong JSON format"}
 	}
 
+	rv := []Result{}
 	feedKey := fmt.Sprintf("eru:agent:%s:feedback", data.TaskID)
 	for seq, ip := range data.IPs {
 		vethName := fmt.Sprintf("%s%d.%d", common.VLAN_PREFIX, ip.Nid, seq)
 		if network.AddVLan(vethName, ip.IP, cid) {
-			gore.NewCommand("LPUSH", feedKey, fmt.Sprintf("1|%s|%s|%s", cid, vethName, ip.IP)).Run(conn)
-			continue
+			rv = append(rv, Result{Succ: 1, ContainerID: cid, VethName: vethName, IP: ip.IP})
 		} else {
-			gore.NewCommand("LPUSH", feedKey, "0|||").Run(conn)
+			rv = append(rv, Result{Succ: 0, ContainerID: "", VethName: "", IP: ""})
 		}
 	}
-	return http.StatusOK, JSON{"message": "ok"}
+	return http.StatusOK, rv
 }
 
 // URL /api/container/:container_id/addroute/
