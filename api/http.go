@@ -67,7 +67,6 @@ func addVlanForContainer(req *Request) (int, interface{}) {
 	}
 
 	rv := []Result{}
-	feedKey := fmt.Sprintf("eru:agent:%s:feedback", data.TaskID)
 	for seq, ip := range data.IPs {
 		vethName := fmt.Sprintf("%s%d.%d", common.VLAN_PREFIX, ip.Nid, seq)
 		if network.AddVLan(vethName, ip.IP, cid) {
