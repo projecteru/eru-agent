@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os/exec"
 	"runtime/pprof"
 
 	_ "net/http/pprof"
@@ -42,13 +43,9 @@ func listEruApps(req *Request) (int, interface{}) {
 
 // URL /api/container/:container_id/addvlan/
 func addVlanForContainer(req *Request) (int, interface{}) {
-	type IP struct {
+	type Endpoint struct {
 		Nid int    `json:"nid"`
 		IP  string `json:"ip"`
-	}
-	type Data struct {
-		TaskID string `json:"task_id"`
-		IPs    []IP   `json:"ips"`
 	}
 	type Result struct {
 		Succ        int    `json:"succ"`
@@ -59,21 +56,64 @@ func addVlanForContainer(req *Request) (int, interface{}) {
 
 	cid := req.URL.Query().Get(":container_id")
 
-	data := &Data{}
+	endpoints := []Endpoint{}
 	decoder := json.NewDecoder(req.Body)
-	err := decoder.Decode(data)
+	err := decoder.Decode(&endpoints)
 	if err != nil {
 		return http.StatusBadRequest, JSON{"message": "wrong JSON format"}
 	}
 
 	rv := []Result{}
-	for seq, ip := range data.IPs {
-		vethName := fmt.Sprintf("%s%d.%d", common.VLAN_PREFIX, ip.Nid, seq)
-		if network.AddVLan(vethName, ip.IP, cid) {
-			rv = append(rv, Result{Succ: 1, ContainerID: cid, VethName: vethName, IP: ip.IP})
+	for seq, endpoint := range endpoints {
+		vethName := fmt.Sprintf("%s%d.%d", common.VLAN_PREFIX, endpoint.Nid, seq)
+		if network.AddVLan(vethName, endpoint.IP, cid) {
+			rv = append(rv, Result{Succ: 1, ContainerID: cid, VethName: vethName, IP: endpoint.IP})
 		} else {
 			rv = append(rv, Result{Succ: 0, ContainerID: "", VethName: "", IP: ""})
 		}
+	}
+	return http.StatusOK, rv
+}
+
+// URL /api/container/:container_id/addcalico/
+func addCalicoForContainer(req *Request) (int, interface{}) {
+	type Endpoint struct {
+		Nid     int    `json:"nid"`
+		Profile string `json:"profile"`
+		IP      string `json:"ip"`
+	}
+	type Result struct {
+		Succ        int    `json:"succ"`
+		ContainerID string `json:"container_id"`
+		IP          string `json:"ip"`
+	}
+
+	cid := req.URL.Query().Get(":container_id")
+
+	endpoints := []Endpoint{}
+	decoder := json.NewDecoder(req.Body)
+	err := decoder.Decode(&endpoints)
+	if err != nil {
+		return http.StatusBadRequest, JSON{"message": "wrong JSON format"}
+	}
+
+	rv := []Result{}
+	for _, endpoint := range endpoints {
+		vethName := fmt.Sprintf("%s%d.%d", common.VLAN_PREFIX, endpoint.Nid, seq)
+		add := exec.Command("calicoctl", "container", "add", cid, endpoint.IP, "--interface", vethName)
+		if err := add.Run(); err != nil {
+			rv = append(rv, Result{Succ: 0, ContainerID: cid, IP: endpoint.IP})
+			continue
+		}
+
+		// currently only one profile is used
+		profile := exec.Command("calicoctl", "container", cid, "profile", "append", endpoint.Profile)
+		if err := profile.Run(); err != nil {
+			rv = append(rv, Result{Succ: 0, ContainerID: cid, IP: endpoint.IP})
+			continue
+		}
+
+		rv = append(rv, Result{Succ: 1, ContainerID: cid, IP: endpoint.IP})
 	}
 	return http.StatusOK, rv
 }
@@ -161,10 +201,11 @@ func HTTPServe() {
 			"/api/app/list/": listEruApps,
 		},
 		"POST": {
-			"/api/container/add/":                    addNewContainer,
-			"/api/container/:container_id/addvlan/":  addVlanForContainer,
-			"/api/container/:container_id/setroute/": setRouteForContainer,
-			"/api/container/:container_id/addroute/": addRouteForContainer,
+			"/api/container/add/":                     addNewContainer,
+			"/api/container/:container_id/addvlan/":   addVlanForContainer,
+			"/api/container/:container_id/addcalico/": addCalicoForContainer,
+			"/api/container/:container_id/setroute/":  setRouteForContainer,
+			"/api/container/:container_id/addroute/":  addRouteForContainer,
 		},
 	}
 
