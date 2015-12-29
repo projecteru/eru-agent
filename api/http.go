@@ -98,7 +98,7 @@ func addCalicoForContainer(req *Request) (int, interface{}) {
 	}
 
 	rv := []Result{}
-	for _, endpoint := range endpoints {
+	for seq, endpoint := range endpoints {
 		vethName := fmt.Sprintf("%s%d.%d", common.VLAN_PREFIX, endpoint.Nid, seq)
 		add := exec.Command("calicoctl", "container", "add", cid, endpoint.IP, "--interface", vethName)
 		if err := add.Run(); err != nil {
