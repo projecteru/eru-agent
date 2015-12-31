@@ -34,6 +34,7 @@ type RedisConfig struct {
 
 type VLanConfig struct {
 	Physical []string
+	Calico   string
 }
 
 type APIConfig struct {
