@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"os/exec"
 	"runtime/pprof"
 
@@ -88,7 +89,13 @@ func addCalicoForContainer(req *Request) (int, interface{}) {
 		IP          string `json:"ip"`
 	}
 
+	if g.Config.VLan.Calico == "" {
+		return http.StatusBadRequest, JSON{"message": "Agent not enable calico support"}
+	}
+
 	cid := req.URL.Query().Get(":container_id")
+	env := os.Environ()
+	env.append(env, fmt.Sprintf("ETCD_AUTHORITY=%s", g.Config.VLan.Calico))
 
 	endpoints := []Endpoint{}
 	decoder := json.NewDecoder(req.Body)
@@ -101,6 +108,7 @@ func addCalicoForContainer(req *Request) (int, interface{}) {
 	for seq, endpoint := range endpoints {
 		vethName := fmt.Sprintf("%s%d.%d", common.VLAN_PREFIX, endpoint.Nid, seq)
 		add := exec.Command("calicoctl", "container", "add", cid, endpoint.IP, "--interface", vethName)
+		add.Env = env
 		if err := add.Run(); err != nil {
 			rv = append(rv, Result{Succ: 0, ContainerID: cid, IP: endpoint.IP})
 			continue
@@ -108,6 +116,7 @@ func addCalicoForContainer(req *Request) (int, interface{}) {
 
 		// currently only one profile is used
 		profile := exec.Command("calicoctl", "container", cid, "profile", "append", endpoint.Profile)
+		profile.Env = env
 		if err := profile.Run(); err != nil {
 			rv = append(rv, Result{Succ: 0, ContainerID: cid, IP: endpoint.IP})
 			continue

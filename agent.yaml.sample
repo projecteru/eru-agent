@@ -28,6 +28,7 @@ metrics:
 vlan:
   physical:
     - em1
+  calico: 10.10.177.49:2379
 
 redis:
   host: 127.0.0.1
