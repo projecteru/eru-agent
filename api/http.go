@@ -95,7 +95,7 @@ func addCalicoForContainer(req *Request) (int, interface{}) {
 
 	cid := req.URL.Query().Get(":container_id")
 	env := os.Environ()
-	env.append(env, fmt.Sprintf("ETCD_AUTHORITY=%s", g.Config.VLan.Calico))
+	env = append(env, fmt.Sprintf("ETCD_AUTHORITY=%s", g.Config.VLan.Calico))
 
 	endpoints := []Endpoint{}
 	decoder := json.NewDecoder(req.Body)
