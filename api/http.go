@@ -111,6 +111,7 @@ func addCalicoForContainer(req *Request) (int, interface{}) {
 		add.Env = env
 		if err := add.Run(); err != nil {
 			rv = append(rv, Result{Succ: 0, ContainerID: cid, IP: endpoint.IP})
+			logs.Info("API calico add interface failed", err)
 			continue
 		}
 
@@ -119,6 +120,7 @@ func addCalicoForContainer(req *Request) (int, interface{}) {
 		profile.Env = env
 		if err := profile.Run(); err != nil {
 			rv = append(rv, Result{Succ: 0, ContainerID: cid, IP: endpoint.IP})
+			logs.Info("API calico add profile failed", err)
 			continue
 		}
 
