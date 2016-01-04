@@ -5,10 +5,7 @@ import (
 )
 
 func Serve() {
-	if g.Config.API.PubSub {
-		go PubSubServe()
-	}
-	if g.Config.API.Http {
+	if g.Config.API.Addr != "" {
 		go HTTPServe()
 	}
 }

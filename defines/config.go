@@ -38,9 +38,7 @@ type VLanConfig struct {
 }
 
 type APIConfig struct {
-	Http   bool
-	PubSub bool
-	Addr   string
+	Addr string
 }
 
 type LimitConfig struct {
