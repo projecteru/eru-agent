@@ -37,6 +37,4 @@ redis:
   max: 100
 
 api:
-  http: true
-  pubsub: true
   addr: 0.0.0.0:12345
