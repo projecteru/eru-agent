@@ -82,11 +82,13 @@ func addCalicoForContainer(req *Request) (int, interface{}) {
 		Nid     int    `json:"nid"`
 		Profile string `json:"profile"`
 		IP      string `json:"ip"`
+		Append  bool   `json:"append"`
 	}
 	type Result struct {
 		Succ        int    `json:"succ"`
 		ContainerID string `json:"container_id"`
 		IP          string `json:"ip"`
+		Err         string `json:"err"`
 	}
 
 	if g.Config.VLan.Calico == "" {
@@ -107,19 +109,30 @@ func addCalicoForContainer(req *Request) (int, interface{}) {
 	rv := []Result{}
 	for seq, endpoint := range endpoints {
 		vethName := fmt.Sprintf("%s%d.%d", common.VLAN_PREFIX, endpoint.Nid, seq)
-		add := exec.Command("calicoctl", "container", "add", cid, endpoint.IP, "--interface", vethName)
-		add.Env = env
-		if err := add.Run(); err != nil {
-			rv = append(rv, Result{Succ: 0, ContainerID: cid, IP: endpoint.IP})
-			logs.Info("API calico add interface failed", err)
-			continue
+		if !endpoint.Append {
+			add := exec.Command("calicoctl", "container", "add", cid, endpoint.IP, "--interface", vethName)
+			add.Env = env
+			if err := add.Run(); err != nil {
+				rv = append(rv, Result{Succ: 0, ContainerID: cid, IP: endpoint.IP, Err: err.Error()})
+				logs.Info("API calico add interface failed", err)
+				continue
+			}
+		} else {
+			add := exec.Command("calicoctl", "container", cid, "ip", "add", endpoint.IP, "--interface", vethName)
+			add.Env = env
+			if err := add.Run(); err != nil {
+				rv = append(rv, Result{Succ: 0, ContainerID: cid, IP: endpoint.IP, Err: err.Error()})
+				logs.Info("API calico append interface failed", err)
+				continue
+			}
 		}
 
+		//TODO remove when eru-core support ACL
 		// currently only one profile is used
 		profile := exec.Command("calicoctl", "container", cid, "profile", "append", endpoint.Profile)
 		profile.Env = env
 		if err := profile.Run(); err != nil {
-			rv = append(rv, Result{Succ: 0, ContainerID: cid, IP: endpoint.IP})
+			rv = append(rv, Result{Succ: 0, ContainerID: cid, IP: endpoint.IP, Err: err.Error()})
 			logs.Info("API calico add profile failed", err)
 			continue
 		}
