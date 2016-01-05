@@ -164,13 +164,13 @@ func reportContainerDeath(cid string) {
 		return
 	}
 
-	url := fmt.Sprintf("%s/api/container/%s/kill", g.Config.Eru.Endpoint, cid)
+	url := fmt.Sprintf("%s/api/container/%s/kill/", g.Config.Eru.Endpoint, cid)
 	utils.DoPut(url)
 	logs.Debug(cid[:12], "dead, remove from watching list")
 }
 
 func reportContainerCure(cid string) {
-	url := fmt.Sprintf("%s/api/container/%s/cure", g.Config.Eru.Endpoint, cid)
+	url := fmt.Sprintf("%s/api/container/%s/cure/", g.Config.Eru.Endpoint, cid)
 	utils.DoPut(url)
 	logs.Debug(cid[:12], "cured, added in watching list")
 }
