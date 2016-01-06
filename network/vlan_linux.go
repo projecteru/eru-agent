@@ -1,6 +1,7 @@
 package network
 
 import (
+	"os/exec"
 	"runtime"
 
 	"github.com/HunanTV/eru-agent/g"
@@ -30,19 +31,9 @@ func setUpVLan(cid, ips string, pid int, veth netlink.Link) bool {
 	defer ns.Close()
 	defer netns.Set(origns)
 
-	addr, err := netlink.ParseAddr(ips)
-	if err != nil {
-		logs.Info("Parse CIDR failed", err)
-		return false
-	}
-
-	if err := netlink.AddrAdd(veth, addr); err != nil {
-		logs.Info("Add addr to veth failed", err)
-		return false
-	}
-
-	if err := netlink.LinkSetUp(veth); err != nil {
-		logs.Info("Setup veth failed", err)
+	if err := BindAndSetup(veth, ips); err != nil {
+		logs.Info("Bind and setup NIC failed", err)
+		DelVlan(veth)
 		return false
 	}
 
@@ -50,11 +41,9 @@ func setUpVLan(cid, ips string, pid int, veth netlink.Link) bool {
 	return true
 }
 
-func AddVLan(vethName, ips, cid string) bool {
+func AddVlan(vethName, ips, cid string) bool {
 	lock.Lock()
 	defer lock.Unlock()
-	device, _ := Devices.Get(cid, 0)
-	logs.Info("Add new VLan to", vethName, cid[:12])
 
 	container, err := g.Docker.InspectContainer(cid)
 	if err != nil {
@@ -62,10 +51,28 @@ func AddVLan(vethName, ips, cid string) bool {
 		return false
 	}
 
+	veth, err := AddMacVlanDevice(vethName, cid)
+	if err != nil {
+		logs.Info("Create macvlan device failed", err)
+		return false
+	}
+
+	if err := netlink.LinkSetNsPid(veth, container.State.Pid); err != nil {
+		logs.Info("Set macvlan device into container failed", err)
+		DelVlan(veth)
+		return false
+	}
+
+	return setUpVLan(cid, ips, container.State.Pid, veth)
+}
+
+func AddMacVlanDevice(vethName, seq string) (netlink.Link, error) {
+	device, _ := Devices.Get(seq, 0)
+	logs.Info("Add new macvlan device", vethName, device)
+
 	parent, err := netlink.LinkByName(device)
 	if err != nil {
-		logs.Info("Get parent NIC failed", err)
-		return false
+		return nil, err
 	}
 
 	veth := &netlink.Macvlan{
@@ -74,15 +81,50 @@ func AddVLan(vethName, ips, cid string) bool {
 	}
 
 	if err := netlink.LinkAdd(veth); err != nil {
-		logs.Info("Create macvlan device failed", err)
-		return false
+		return nil, err
+	}
+	return veth, nil
+}
+
+func BindAndSetup(veth netlink.Link, ips string) error {
+	addr, err := netlink.ParseAddr(ips)
+	if err != nil {
+		return err
 	}
 
-	if err := netlink.LinkSetNsPid(veth, container.State.Pid); err != nil {
-		logs.Info("Set macvlan device into container failed", err)
-		delVLan(veth)
-		return false
+	if err := netlink.AddrAdd(veth, addr); err != nil {
+		return err
 	}
 
-	return setUpVLan(cid, ips, container.State.Pid, veth)
+	if err := netlink.LinkSetUp(veth); err != nil {
+		return err
+	}
+	return nil
+}
+
+func AddCalico(env []string, multiple bool, cid, vethName, ip string) error {
+	if !multiple {
+		add := exec.Command("calicoctl", "container", "add", cid, ip, "--interface", vethName)
+		add.Env = env
+		return add.Run()
+	}
+	add := exec.Command("calicoctl", "container", cid, "ip", "add", ip, "--interface", vethName)
+	add.Env = env
+	return add.Run()
+}
+
+func BindCalicoProfile(env []string, cid, profileName string) error {
+	profile := exec.Command("calicoctl", "container", cid, "profile", "append", profileName)
+	profile.Env = env
+	return profile.Run()
+}
+
+func AddPrerouting(protocol, ip, port, dest, ident string) error {
+	cmd := exec.Command("iptables", "-t", "nat", "-A", "PREROUTING", "-p", protocol, "-d", ip, "--dport", port, "-j", "DNAT", "--to-destination", dest, "-m", "comment", "--comment", ident)
+	return cmd.Run()
+}
+
+func DelPrerouting(protocol, ip, port, dest, ident string) error {
+	cmd := exec.Command("iptables", "-t", "nat", "-D", "PREROUTING", "-p", protocol, "-d", ip, "--dport", port, "-j", "DNAT", "--to-destination", dest, "-m", "comment", "--comment", ident)
+	return cmd.Run()
 }

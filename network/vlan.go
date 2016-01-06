@@ -20,7 +20,7 @@ func InitVlan() {
 	logs.Info("Vlan initiated")
 }
 
-func delVLan(link netlink.Link) {
+func DelVlan(link netlink.Link) {
 	if err := netlink.LinkDel(link); err != nil {
 		logs.Debug("Delete device failed", err)
 	}
