@@ -165,6 +165,52 @@ func addCalicoForContainer(req *Request) (int, interface{}) {
 	return http.StatusOK, rv
 }
 
+// URL /api/container/publish/
+func publishContainer(req *Request) (int, interface{}) {
+	type PublicInfo struct {
+		EIP      string `json:"eip"`
+		Port     string `json:"port"`
+		Dest     string `json:"dest"`
+		Ident    string `json:"ident"`
+		Protocol string `json:"protocol"`
+	}
+
+	info := &PublicInfo{}
+	decoder := json.NewDecoder(req.Body)
+	if err := decoder.Decode(info); err != nil {
+		return http.StatusBadRequest, JSON{"message": "wrong JSON format"}
+	}
+
+	if err := network.AddPrerouting(info.Protocol, info.EIP, info.Port, info.Dest, info.Ident); err != nil {
+		logs.Info("Public application failed", err)
+		return http.StatusBadRequest, JSON{"message": "publish application failed"}
+	}
+	return http.StatusOK, JSON{"message": "ok"}
+}
+
+// URL /api/container/disable/
+func disableContainer(req *Request) (int, interface{}) {
+	type PublicInfo struct {
+		EIP      string `json:"eip"`
+		Port     string `json:"port"`
+		Dest     string `json:"dest"`
+		Ident    string `json:"ident"`
+		Protocol string `json:"protocol"`
+	}
+
+	info := &PublicInfo{}
+	decoder := json.NewDecoder(req.Body)
+	if err := decoder.Decode(info); err != nil {
+		return http.StatusBadRequest, JSON{"message": "wrong JSON format"}
+	}
+
+	if err := network.DelPrerouting(info.Protocol, info.EIP, info.Port, info.Dest, info.Ident); err != nil {
+		logs.Info("Diable application failed", err)
+		return http.StatusBadRequest, JSON{"message": "disable application failed"}
+	}
+	return http.StatusOK, JSON{"message": "ok"}
+}
+
 // URL /api/container/:container_id/addroute/
 func addRouteForContainer(req *Request) (int, interface{}) {
 	type Entry struct {
@@ -254,6 +300,8 @@ func HTTPServe() {
 			"/api/container/:container_id/setroute/":  setRouteForContainer,
 			"/api/container/:container_id/addroute/":  addRouteForContainer,
 			"/api/eip/bind/":                          bindEIP,
+			"/api/container/publish/":                 publishContainer,
+			"/api/container/disable/":                 disableContainer,
 		},
 	}
 

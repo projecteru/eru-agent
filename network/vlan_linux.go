@@ -33,6 +33,7 @@ func setUpVLan(cid, ips string, pid int, veth netlink.Link) bool {
 
 	if err := BindAndSetup(veth, ips); err != nil {
 		logs.Info("Bind and setup NIC failed", err)
+		DelVlan(veth)
 		return false
 	}
 
@@ -116,4 +117,14 @@ func BindCalicoProfile(env []string, cid, profileName string) error {
 	profile := exec.Command("calicoctl", "container", cid, "profile", "append", profileName)
 	profile.Env = env
 	return profile.Run()
+}
+
+func AddPrerouting(protocol, ip, port, dest, ident string) error {
+	cmd := exec.Command("iptables", "-t", "nat", "-A", "PREROUTING", "-p", protocol, "-d", ip, "--dport", port, "-j", "DNAT", "--to-destination", dest, "-m", "comment", "--comment", ident)
+	return cmd.Run()
+}
+
+func DelPrerouting(protocol, ip, port, dest, ident string) error {
+	cmd := exec.Command("iptables", "-t", "nat", "-D", "PREROUTING", "-p", protocol, "-d", ip, "--dport", port, "-j", "DNAT", "--to-destination", dest, "-m", "comment", "--comment", ident)
+	return cmd.Run()
 }

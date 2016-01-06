@@ -31,3 +31,11 @@ func AddCalico(multiple bool, cid, vethName, ip string) error {
 func BindCalicoProfile(env []string, cid, profile string) error {
 	return nil
 }
+
+func AddPrerouting(protocol, ip, port, dest, ident string) error {
+	return nil
+}
+
+func DelPrerouting(protocol, ip, port, dest, ident string) error {
+	return nil
+}
