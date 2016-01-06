@@ -40,7 +40,7 @@ func setUpVLan(cid, ips string, pid int, veth netlink.Link) bool {
 	return true
 }
 
-func AddVLan(vethName, ips, cid string) bool {
+func AddVlan(vethName, ips, cid string) bool {
 	lock.Lock()
 	defer lock.Unlock()
 
@@ -50,27 +50,28 @@ func AddVLan(vethName, ips, cid string) bool {
 		return false
 	}
 
-	if err := AddMacVlanDevice(vethName, cid); err != nil {
+	veth, err := AddMacVlanDevice(vethName, cid)
+	if err != nil {
 		logs.Info("Create macvlan device failed", err)
 		return false
 	}
 
 	if err := netlink.LinkSetNsPid(veth, container.State.Pid); err != nil {
 		logs.Info("Set macvlan device into container failed", err)
-		delVLan(veth)
+		DelVlan(veth)
 		return false
 	}
 
 	return setUpVLan(cid, ips, container.State.Pid, veth)
 }
 
-func AddMacVlanDevice(vethName, seq string) error {
+func AddMacVlanDevice(vethName, seq string) (netlink.Link, error) {
 	device, _ := Devices.Get(seq, 0)
 	logs.Info("Add new macvlan device", vethName, device)
 
 	parent, err := netlink.LinkByName(device)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	veth := &netlink.Macvlan{
@@ -79,9 +80,9 @@ func AddMacVlanDevice(vethName, seq string) error {
 	}
 
 	if err := netlink.LinkAdd(veth); err != nil {
-		return err
+		return nil, err
 	}
-	return nil
+	return veth, nil
 }
 
 func BindAndSetup(veth netlink.Link, ips string) error {
@@ -111,8 +112,8 @@ func AddCalico(env []string, multiple bool, cid, vethName, ip string) error {
 	return add.Run()
 }
 
-func BindCalicoProfile(env []string, cid, profile string) error {
-	profile := exec.Command("calicoctl", "container", cid, "profile", "append", profile)
+func BindCalicoProfile(env []string, cid, profileName string) error {
+	profile := exec.Command("calicoctl", "container", cid, "profile", "append", profileName)
 	profile.Env = env
 	return profile.Run()
 }

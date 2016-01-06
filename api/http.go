@@ -41,6 +41,46 @@ func listEruApps(req *Request) (int, interface{}) {
 	return http.StatusOK, ret
 }
 
+// URL /api/eip/bind/
+func bindEIP(req *Request) (int, interface{}) {
+	type EIP struct {
+		IP string `json:"ip"`
+	}
+	type Result struct {
+		Succ int    `json:"succ"`
+		Err  string `json:"err"`
+		IP   string `json:"ip"`
+	}
+
+	eips := []EIP{}
+	decoder := json.NewDecoder(req.Body)
+	if err := decoder.Decode(&eips); err != nil {
+		return http.StatusBadRequest, JSON{"message": "wrong JSON format"}
+	}
+
+	rv := []Result{}
+	for seq, eip := range eips {
+		vethName := fmt.Sprintf("%s%d", common.VLAN_PREFIX, seq)
+		veth, err := network.AddMacVlanDevice(vethName, vethName)
+		if err != nil {
+			rv = append(rv, Result{Succ: 0, IP: eip.IP, Err: err.Error()})
+			logs.Info("API add EIP failed", err)
+			continue
+		}
+
+		if err := network.BindAndSetup(veth, eip.IP); err != nil {
+			rv = append(rv, Result{Succ: 0, IP: eip.IP, Err: err.Error()})
+			network.DelVlan(veth)
+			logs.Info("API bind EIP failed", err)
+			continue
+		}
+
+		rv = append(rv, Result{Succ: 1, IP: eip.IP})
+	}
+
+	return http.StatusOK, rv
+}
+
 // URL /api/container/:container_id/addvlan/
 func addVlanForContainer(req *Request) (int, interface{}) {
 	type Endpoint struct {
@@ -58,19 +98,18 @@ func addVlanForContainer(req *Request) (int, interface{}) {
 
 	endpoints := []Endpoint{}
 	decoder := json.NewDecoder(req.Body)
-	err := decoder.Decode(&endpoints)
-	if err != nil {
+	if err := decoder.Decode(&endpoints); err != nil {
 		return http.StatusBadRequest, JSON{"message": "wrong JSON format"}
 	}
 
 	rv := []Result{}
 	for seq, endpoint := range endpoints {
 		vethName := fmt.Sprintf("%s%d.%d", common.VLAN_PREFIX, endpoint.Nid, seq)
-		if network.AddVLan(vethName, endpoint.IP, cid) {
+		if network.AddVlan(vethName, endpoint.IP, cid) {
 			rv = append(rv, Result{Succ: 1, ContainerID: cid, VethName: vethName, IP: endpoint.IP})
-		} else {
-			rv = append(rv, Result{Succ: 0, ContainerID: "", VethName: "", IP: ""})
+			continue
 		}
+		rv = append(rv, Result{Succ: 0, ContainerID: "", VethName: "", IP: ""})
 	}
 	return http.StatusOK, rv
 }
@@ -100,15 +139,14 @@ func addCalicoForContainer(req *Request) (int, interface{}) {
 
 	endpoints := []Endpoint{}
 	decoder := json.NewDecoder(req.Body)
-	err := decoder.Decode(&endpoints)
-	if err != nil {
+	if err := decoder.Decode(&endpoints); err != nil {
 		return http.StatusBadRequest, JSON{"message": "wrong JSON format"}
 	}
 
 	rv := []Result{}
 	for seq, endpoint := range endpoints {
 		vethName := fmt.Sprintf("%s%d.%d", common.VLAN_PREFIX, endpoint.Nid, seq)
-		if err = network.AddCalico(env, endpoint.Append, cid, vethName, endpoint.IP); err != nil {
+		if err := network.AddCalico(env, endpoint.Append, cid, vethName, endpoint.IP); err != nil {
 			rv = append(rv, Result{Succ: 0, ContainerID: cid, IP: endpoint.IP, Err: err.Error()})
 			logs.Info("API calico add interface failed", err)
 			continue
@@ -116,7 +154,7 @@ func addCalicoForContainer(req *Request) (int, interface{}) {
 
 		//TODO remove when eru-core support ACL
 		// currently only one profile is used
-		if err = network.BindCalicoProfile(env, cid, endpoint.Profile); err != nil {
+		if err := network.BindCalicoProfile(env, cid, endpoint.Profile); err != nil {
 			rv = append(rv, Result{Succ: 0, ContainerID: cid, IP: endpoint.IP, Err: err.Error()})
 			logs.Info("API calico add profile failed", err)
 			continue
@@ -215,6 +253,7 @@ func HTTPServe() {
 			"/api/container/:container_id/addcalico/": addCalicoForContainer,
 			"/api/container/:container_id/setroute/":  setRouteForContainer,
 			"/api/container/:container_id/addroute/":  addRouteForContainer,
+			"/api/eip/bind/":                          bindEIP,
 		},
 	}
 

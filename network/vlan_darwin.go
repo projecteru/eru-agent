@@ -6,7 +6,7 @@ import (
 	"github.com/vishvananda/netlink"
 )
 
-func AddVLan(vethName, ips, cid string) bool {
+func AddVlan(vethName, ips, cid string) bool {
 	_, err := g.Docker.InspectContainer(cid)
 	if err != nil {
 		logs.Info("VLanSetter inspect docker failed", err)
