@@ -16,6 +16,9 @@ func AddVlan(vethName, ips, cid string) bool {
 	return true
 }
 
+func DelMacVlanDevice(vethName string) error {
+}
+
 func AddMacVlanDevice(vethName, seq string) error {
 	return nil
 }

@@ -41,9 +41,10 @@ func listEruApps(req *Request) (int, interface{}) {
 	return http.StatusOK, ret
 }
 
-// URL /api/eip/bind/
-func bindEIP(req *Request) (int, interface{}) {
+// URL /api/eip/release/
+func releaseEIP(req *Request) (int, interface{}) {
 	type EIP struct {
+		ID int    `json:"id"`
 		IP string `json:"ip"`
 	}
 	type Result struct {
@@ -59,8 +60,40 @@ func bindEIP(req *Request) (int, interface{}) {
 	}
 
 	rv := []Result{}
-	for seq, eip := range eips {
-		vethName := fmt.Sprintf("%s%d", common.VLAN_PREFIX, seq)
+	for _, eip := range eips {
+		vethName := fmt.Sprintf("%s%d", common.VLAN_PREFIX, eip.ID)
+		if err := network.DelMacVlanDevice(vethName); err != nil {
+			rv = append(rv, Result{Succ: 0, IP: eip.IP, Err: err.Error()})
+			logs.Info("Release EIP failed", err, vethName)
+			continue
+		}
+		rv = append(rv, Result{Succ: 1, IP: eip.IP})
+	}
+
+	return http.StatusOK, rv
+}
+
+// URL /api/eip/bind/
+func bindEIP(req *Request) (int, interface{}) {
+	type EIP struct {
+		ID int    `json:"id"`
+		IP string `json:"ip"`
+	}
+	type Result struct {
+		Succ int    `json:"succ"`
+		Err  string `json:"err"`
+		IP   string `json:"ip"`
+	}
+
+	eips := []EIP{}
+	decoder := json.NewDecoder(req.Body)
+	if err := decoder.Decode(&eips); err != nil {
+		return http.StatusBadRequest, JSON{"message": "wrong JSON format"}
+	}
+
+	rv := []Result{}
+	for _, eip := range eips {
+		vethName := fmt.Sprintf("%s%d", common.VLAN_PREFIX, eip.ID)
 		veth, err := network.AddMacVlanDevice(vethName, vethName)
 		if err != nil {
 			rv = append(rv, Result{Succ: 0, IP: eip.IP, Err: err.Error()})
@@ -188,8 +221,8 @@ func publishContainer(req *Request) (int, interface{}) {
 	return http.StatusOK, JSON{"message": "ok"}
 }
 
-// URL /api/container/disable/
-func disableContainer(req *Request) (int, interface{}) {
+// URL /api/container/unpublish/
+func unpublishContainer(req *Request) (int, interface{}) {
 	type PublicInfo struct {
 		EIP      string `json:"eip"`
 		Port     string `json:"port"`
@@ -300,8 +333,9 @@ func HTTPServe() {
 			"/api/container/:container_id/setroute/":  setRouteForContainer,
 			"/api/container/:container_id/addroute/":  addRouteForContainer,
 			"/api/eip/bind/":                          bindEIP,
+			"/api/eip/release/":                       releaseEIP,
 			"/api/container/publish/":                 publishContainer,
-			"/api/container/disable/":                 disableContainer,
+			"/api/container/unpublish/":               unpublishContainer,
 		},
 	}
 

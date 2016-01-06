@@ -66,6 +66,15 @@ func AddVlan(vethName, ips, cid string) bool {
 	return setUpVLan(cid, ips, container.State.Pid, veth)
 }
 
+func DelMacVlanDevice(vethName string) error {
+	link, err := netlink.LinkByName(vethName)
+	if err != nil {
+		return err
+	}
+	DelVlan(link)
+	return nil
+}
+
 func AddMacVlanDevice(vethName, seq string) (netlink.Link, error) {
 	device, _ := Devices.Get(seq, 0)
 	logs.Info("Add new macvlan device", vethName, device)
