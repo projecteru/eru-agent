@@ -3,6 +3,7 @@ package network
 import (
 	"github.com/HunanTV/eru-agent/g"
 	"github.com/HunanTV/eru-agent/logs"
+	"github.com/vishvananda/netlink"
 )
 
 func AddVLan(vethName, ips, cid string) bool {
@@ -13,4 +14,20 @@ func AddVLan(vethName, ips, cid string) bool {
 	}
 	logs.Info("Add VLAN device success", cid, vethName)
 	return true
+}
+
+func AddMacVlanDevice(vethName, seq string) error {
+	return nil
+}
+
+func BindAndSetup(veth netlink.Link, ips string) error {
+	return nil
+}
+
+func AddCalico(multiple bool, cid, vethName, ip string) error {
+	return nil
+}
+
+func BindCalicoProfile(env []string, cid, profile string) error {
+	return nil
 }

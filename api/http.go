@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"os/exec"
 	"runtime/pprof"
 
 	_ "net/http/pprof"
@@ -109,29 +108,15 @@ func addCalicoForContainer(req *Request) (int, interface{}) {
 	rv := []Result{}
 	for seq, endpoint := range endpoints {
 		vethName := fmt.Sprintf("%s%d.%d", common.VLAN_PREFIX, endpoint.Nid, seq)
-		if !endpoint.Append {
-			add := exec.Command("calicoctl", "container", "add", cid, endpoint.IP, "--interface", vethName)
-			add.Env = env
-			if err := add.Run(); err != nil {
-				rv = append(rv, Result{Succ: 0, ContainerID: cid, IP: endpoint.IP, Err: err.Error()})
-				logs.Info("API calico add interface failed", err)
-				continue
-			}
-		} else {
-			add := exec.Command("calicoctl", "container", cid, "ip", "add", endpoint.IP, "--interface", vethName)
-			add.Env = env
-			if err := add.Run(); err != nil {
-				rv = append(rv, Result{Succ: 0, ContainerID: cid, IP: endpoint.IP, Err: err.Error()})
-				logs.Info("API calico append interface failed", err)
-				continue
-			}
+		if err = network.AddCalico(env, endpoint.Append, cid, vethName, endpoint.IP); err != nil {
+			rv = append(rv, Result{Succ: 0, ContainerID: cid, IP: endpoint.IP, Err: err.Error()})
+			logs.Info("API calico add interface failed", err)
+			continue
 		}
 
 		//TODO remove when eru-core support ACL
 		// currently only one profile is used
-		profile := exec.Command("calicoctl", "container", cid, "profile", "append", endpoint.Profile)
-		profile.Env = env
-		if err := profile.Run(); err != nil {
+		if err = network.BindCalicoProfile(env, cid, endpoint.Profile); err != nil {
 			rv = append(rv, Result{Succ: 0, ContainerID: cid, IP: endpoint.IP, Err: err.Error()})
 			logs.Info("API calico add profile failed", err)
 			continue
