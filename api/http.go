@@ -75,8 +75,9 @@ func releaseEIP(req *Request) (int, interface{}) {
 // URL /api/eip/bind/
 func bindEIP(req *Request) (int, interface{}) {
 	type EIP struct {
-		ID int    `json:"id"`
-		IP string `json:"ip"`
+		ID        int    `json:"id"`
+		IP        string `json:"ip"`
+		Broadcast string `json:"broadcast"`
 	}
 	type Result struct {
 		Succ int    `json:"succ"`
@@ -104,6 +105,13 @@ func bindEIP(req *Request) (int, interface{}) {
 			rv = append(rv, Result{Succ: 0, IP: eip.IP, Err: err.Error()})
 			network.DelVlan(veth)
 			logs.Info("API bind EIP failed", err)
+			continue
+		}
+
+		if err := network.SetBroadcast(vethName, eip.Broadcast); err != nil {
+			rv = append(rv, Result{Succ: 0, IP: eip.IP, Err: err.Error()})
+			network.DelVlan(veth)
+			logs.Info("API set broadcast failed", err)
 			continue
 		}
 

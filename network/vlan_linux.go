@@ -67,6 +67,7 @@ func AddVlan(vethName, ips, cid string) bool {
 }
 
 func DelMacVlanDevice(vethName string) error {
+	logs.Info("Release macvlan device", vethName)
 	link, err := netlink.LinkByName(vethName)
 	if err != nil {
 		return err
@@ -109,6 +110,11 @@ func BindAndSetup(veth netlink.Link, ips string) error {
 		return err
 	}
 	return nil
+}
+
+func SetBroadcast(vethName, ip string) error {
+	cmd := exec.Command("ifconfig", vethName, "broadcast", ip)
+	return cmd.Run()
 }
 
 func AddCalico(env []string, multiple bool, cid, vethName, ip string) error {

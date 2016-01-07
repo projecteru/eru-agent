@@ -42,3 +42,7 @@ func AddPrerouting(protocol, ip, port, dest, ident string) error {
 func DelPrerouting(protocol, ip, port, dest, ident string) error {
 	return nil
 }
+
+func SetBroadcast(vethName, ip string) error {
+	return nil
+}
