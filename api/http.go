@@ -44,13 +44,12 @@ func listEruApps(req *Request) (int, interface{}) {
 // URL /api/eip/release/
 func releaseEIP(req *Request) (int, interface{}) {
 	type EIP struct {
-		ID int    `json:"id"`
-		IP string `json:"ip"`
+		ID int `json:"id"`
 	}
 	type Result struct {
 		Succ int    `json:"succ"`
 		Err  string `json:"err"`
-		IP   string `json:"ip"`
+		Veth string `json:"id"`
 	}
 
 	eips := []EIP{}
@@ -63,11 +62,11 @@ func releaseEIP(req *Request) (int, interface{}) {
 	for _, eip := range eips {
 		vethName := fmt.Sprintf("%s%d", common.VLAN_PREFIX, eip.ID)
 		if err := network.DelMacVlanDevice(vethName); err != nil {
-			rv = append(rv, Result{Succ: 0, IP: eip.IP, Err: err.Error()})
+			rv = append(rv, Result{Succ: 0, Veth: vethName, Err: err.Error()})
 			logs.Info("Release EIP failed", err, vethName)
 			continue
 		}
-		rv = append(rv, Result{Succ: 1, IP: eip.IP})
+		rv = append(rv, Result{Succ: 1, Veth: vethName})
 	}
 
 	return http.StatusOK, rv
