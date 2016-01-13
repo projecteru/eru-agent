@@ -208,11 +208,9 @@ func addCalicoForContainer(req *Request) (int, interface{}) {
 // URL /api/container/publish/
 func publishContainer(req *Request) (int, interface{}) {
 	type PublicInfo struct {
-		EIP      string `json:"eip"`
-		Port     string `json:"port"`
-		Dest     string `json:"dest"`
-		Ident    string `json:"ident"`
-		Protocol string `json:"protocol"`
+		EIP   string `json:"eip"`
+		Dest  string `json:"dest"`
+		Ident string `json:"ident"`
 	}
 
 	info := &PublicInfo{}
@@ -221,7 +219,7 @@ func publishContainer(req *Request) (int, interface{}) {
 		return http.StatusBadRequest, JSON{"message": "wrong JSON format"}
 	}
 
-	if err := network.AddPrerouting(info.Protocol, info.EIP, info.Port, info.Dest, info.Ident); err != nil {
+	if err := network.AddPrerouting(info.EIP, info.Dest, info.Ident); err != nil {
 		logs.Info("Public application failed", err)
 		return http.StatusBadRequest, JSON{"message": "publish application failed"}
 	}
@@ -231,11 +229,9 @@ func publishContainer(req *Request) (int, interface{}) {
 // URL /api/container/unpublish/
 func unpublishContainer(req *Request) (int, interface{}) {
 	type PublicInfo struct {
-		EIP      string `json:"eip"`
-		Port     string `json:"port"`
-		Dest     string `json:"dest"`
-		Ident    string `json:"ident"`
-		Protocol string `json:"protocol"`
+		EIP   string `json:"eip"`
+		Dest  string `json:"dest"`
+		Ident string `json:"ident"`
 	}
 
 	info := &PublicInfo{}
@@ -244,7 +240,7 @@ func unpublishContainer(req *Request) (int, interface{}) {
 		return http.StatusBadRequest, JSON{"message": "wrong JSON format"}
 	}
 
-	if err := network.DelPrerouting(info.Protocol, info.EIP, info.Port, info.Dest, info.Ident); err != nil {
+	if err := network.DelPrerouting(info.EIP, info.Dest, info.Ident); err != nil {
 		logs.Info("Diable application failed", err)
 		return http.StatusBadRequest, JSON{"message": "disable application failed"}
 	}

@@ -134,12 +134,12 @@ func BindCalicoProfile(env []string, cid, profileName string) error {
 	return profile.Run()
 }
 
-func AddPrerouting(protocol, ip, port, dest, ident string) error {
-	cmd := exec.Command("iptables", "-t", "nat", "-A", "PREROUTING", "-p", protocol, "-d", ip, "--dport", port, "-j", "DNAT", "--to-destination", dest, "-m", "comment", "--comment", ident)
+func AddPrerouting(eip, dest, ident string) error {
+	cmd := exec.Command("iptables", "-t", "nat", "-A", "PREROUTING", "-d", eip, "-j", "DNAT", "--to-destination", dest, "-m", "comment", "--comment", ident)
 	return cmd.Run()
 }
 
-func DelPrerouting(protocol, ip, port, dest, ident string) error {
-	cmd := exec.Command("iptables", "-t", "nat", "-D", "PREROUTING", "-p", protocol, "-d", ip, "--dport", port, "-j", "DNAT", "--to-destination", dest, "-m", "comment", "--comment", ident)
+func DelPrerouting(eip, dest, ident string) error {
+	cmd := exec.Command("iptables", "-t", "nat", "-D", "PREROUTING", "-d", eip, "-j", "DNAT", "--to-destination", dest, "-m", "comment", "--comment", ident)
 	return cmd.Run()
 }
