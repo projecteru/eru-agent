@@ -35,11 +35,11 @@ func BindCalicoProfile(env []string, cid, profile string) error {
 	return nil
 }
 
-func AddPrerouting(protocol, ip, port, dest, ident string) error {
+func AddPrerouting(eip, dest, ident string) error {
 	return nil
 }
 
-func DelPrerouting(protocol, ip, port, dest, ident string) error {
+func DelPrerouting(eip, dest, ident string) error {
 	return nil
 }
 
