@@ -3,8 +3,8 @@ package g
 import (
 	"fmt"
 
-	"github.com/HunanTV/eru-agent/defines"
-	"github.com/HunanTV/eru-agent/logs"
+	"github.com/projecteru/eru-agent/defines"
+	"github.com/projecteru/eru-agent/logs"
 	"github.com/keimoon/gore"
 )
 

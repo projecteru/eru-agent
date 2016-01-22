@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/HunanTV/eru-agent/g"
-	"github.com/HunanTV/eru-agent/logs"
-	"github.com/HunanTV/eru-agent/utils"
+	"github.com/projecteru/eru-agent/g"
+	"github.com/projecteru/eru-agent/logs"
+	"github.com/projecteru/eru-agent/utils"
 )
 
 func Check() {

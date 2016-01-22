@@ -5,15 +5,15 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/HunanTV/eru-agent/api"
-	"github.com/HunanTV/eru-agent/app"
-	"github.com/HunanTV/eru-agent/g"
-	"github.com/HunanTV/eru-agent/health"
-	"github.com/HunanTV/eru-agent/lenz"
-	"github.com/HunanTV/eru-agent/logs"
-	"github.com/HunanTV/eru-agent/network"
-	"github.com/HunanTV/eru-agent/status"
-	"github.com/HunanTV/eru-agent/utils"
+	"github.com/projecteru/eru-agent/api"
+	"github.com/projecteru/eru-agent/app"
+	"github.com/projecteru/eru-agent/g"
+	"github.com/projecteru/eru-agent/health"
+	"github.com/projecteru/eru-agent/lenz"
+	"github.com/projecteru/eru-agent/logs"
+	"github.com/projecteru/eru-agent/network"
+	"github.com/projecteru/eru-agent/status"
+	"github.com/projecteru/eru-agent/utils"
 )
 
 func main() {

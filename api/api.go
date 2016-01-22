@@ -1,7 +1,7 @@
 package api
 
 import (
-	"github.com/HunanTV/eru-agent/g"
+	"github.com/projecteru/eru-agent/g"
 )
 
 func Serve() {

@@ -3,9 +3,9 @@ package app
 import (
 	"fmt"
 
-	"github.com/HunanTV/eru-agent/common"
-	"github.com/HunanTV/eru-agent/g"
-	"github.com/HunanTV/eru-agent/logs"
+	"github.com/projecteru/eru-agent/common"
+	"github.com/projecteru/eru-agent/g"
+	"github.com/projecteru/eru-agent/logs"
 	"github.com/keimoon/gore"
 )
 

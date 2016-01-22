@@ -4,8 +4,8 @@ import (
 	"os/exec"
 	"runtime"
 
-	"github.com/HunanTV/eru-agent/g"
-	"github.com/HunanTV/eru-agent/logs"
+	"github.com/projecteru/eru-agent/g"
+	"github.com/projecteru/eru-agent/logs"
 	"github.com/krhubert/netns"
 	"github.com/vishvananda/netlink"
 )

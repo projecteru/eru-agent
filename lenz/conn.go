@@ -9,9 +9,9 @@ import (
 	"net"
 	"net/url"
 
-	"github.com/HunanTV/eru-agent/defines"
-	"github.com/HunanTV/eru-agent/g"
-	"github.com/HunanTV/eru-agent/logs"
+	"github.com/projecteru/eru-agent/defines"
+	"github.com/projecteru/eru-agent/g"
+	"github.com/projecteru/eru-agent/logs"
 )
 
 type UpStream struct {

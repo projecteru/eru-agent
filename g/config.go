@@ -5,9 +5,9 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/HunanTV/eru-agent/common"
-	"github.com/HunanTV/eru-agent/defines"
-	"github.com/HunanTV/eru-agent/logs"
+	"github.com/projecteru/eru-agent/common"
+	"github.com/projecteru/eru-agent/defines"
+	"github.com/projecteru/eru-agent/logs"
 	"gopkg.in/yaml.v2"
 )
 

@@ -2,7 +2,7 @@ package g
 
 import (
 	"github.com/CMGS/consistent"
-	"github.com/HunanTV/eru-agent/logs"
+	"github.com/projecteru/eru-agent/logs"
 )
 
 var Transfers *consistent.Consistent

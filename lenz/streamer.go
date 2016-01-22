@@ -3,9 +3,9 @@ package lenz
 import (
 	"math"
 
-	"github.com/HunanTV/eru-agent/defines"
-	"github.com/HunanTV/eru-agent/g"
-	"github.com/HunanTV/eru-agent/logs"
+	"github.com/projecteru/eru-agent/defines"
+	"github.com/projecteru/eru-agent/g"
+	"github.com/projecteru/eru-agent/logs"
 )
 
 func Streamer(route *defines.Route, logstream chan *defines.Log) {
