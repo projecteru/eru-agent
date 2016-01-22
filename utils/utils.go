@@ -10,8 +10,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/HunanTV/eru-agent/common"
-	"github.com/HunanTV/eru-agent/logs"
+	"github.com/projecteru/eru-agent/common"
+	"github.com/projecteru/eru-agent/logs"
 )
 
 var httpClient *http.Client

@@ -6,12 +6,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/HunanTV/eru-agent/defines"
-	"github.com/HunanTV/eru-agent/g"
-	"github.com/HunanTV/eru-agent/logs"
-	"github.com/HunanTV/eru-agent/utils"
-	"github.com/HunanTV/eru-metric/falcon"
-	"github.com/HunanTV/eru-metric/metric"
+	"github.com/projecteru/eru-agent/defines"
+	"github.com/projecteru/eru-agent/g"
+	"github.com/projecteru/eru-agent/logs"
+	"github.com/projecteru/eru-agent/utils"
+	"github.com/projecteru/eru-metric/falcon"
+	"github.com/projecteru/eru-metric/metric"
 	"github.com/fsouza/go-dockerclient"
 )
 

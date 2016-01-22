@@ -9,12 +9,12 @@ import (
 
 	_ "net/http/pprof"
 
-	"github.com/HunanTV/eru-agent/app"
-	"github.com/HunanTV/eru-agent/common"
-	"github.com/HunanTV/eru-agent/g"
-	"github.com/HunanTV/eru-agent/lenz"
-	"github.com/HunanTV/eru-agent/logs"
-	"github.com/HunanTV/eru-agent/network"
+	"github.com/projecteru/eru-agent/app"
+	"github.com/projecteru/eru-agent/common"
+	"github.com/projecteru/eru-agent/g"
+	"github.com/projecteru/eru-agent/lenz"
+	"github.com/projecteru/eru-agent/logs"
+	"github.com/projecteru/eru-agent/network"
 	"github.com/bmizerany/pat"
 )
 

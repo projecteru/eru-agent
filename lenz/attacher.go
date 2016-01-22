@@ -7,10 +7,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/HunanTV/eru-agent/common"
-	"github.com/HunanTV/eru-agent/defines"
-	"github.com/HunanTV/eru-agent/g"
-	"github.com/HunanTV/eru-agent/logs"
+	"github.com/projecteru/eru-agent/common"
+	"github.com/projecteru/eru-agent/defines"
+	"github.com/projecteru/eru-agent/g"
+	"github.com/projecteru/eru-agent/logs"
 	"github.com/fsouza/go-dockerclient"
 )
 

@@ -3,7 +3,7 @@ package api
 import (
 	"net/http"
 
-	"github.com/HunanTV/eru-agent/logs"
+	"github.com/projecteru/eru-agent/logs"
 )
 
 type Request struct {

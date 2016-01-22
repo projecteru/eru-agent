@@ -3,10 +3,10 @@ package app
 import (
 	"time"
 
-	"github.com/HunanTV/eru-agent/common"
-	"github.com/HunanTV/eru-agent/g"
-	"github.com/HunanTV/eru-agent/logs"
-	"github.com/HunanTV/eru-metric/metric"
+	"github.com/projecteru/eru-agent/common"
+	"github.com/projecteru/eru-agent/g"
+	"github.com/projecteru/eru-agent/logs"
+	"github.com/projecteru/eru-metric/metric"
 )
 
 func Metric() {
