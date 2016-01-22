@@ -6,8 +6,8 @@ import (
 
 	"github.com/projecteru/eru-agent/g"
 	"github.com/projecteru/eru-agent/logs"
-	"github.com/krhubert/netns"
 	"github.com/vishvananda/netlink"
+	"github.com/vishvananda/netns"
 )
 
 func setUpVLan(cid, ips string, pid int, veth netlink.Link) bool {
