@@ -6,8 +6,8 @@ import (
 
 	"github.com/projecteru/eru-agent/g"
 	"github.com/projecteru/eru-agent/logs"
-	"github.com/krhubert/netns"
 	"github.com/vishvananda/netlink"
+	"github.com/vishvananda/netns"
 )
 
 //add default route
