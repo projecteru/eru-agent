@@ -21,9 +21,8 @@ lenz:
 
 metrics:
   step: 30
-  timeout: 1000
   transfers:
-    - 10.1.201.45:8433
+    - 10.1.201.45:8125
 
 vlan:
   physical:
