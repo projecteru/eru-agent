@@ -35,6 +35,10 @@ func NewEruApp(container *docker.Container, extend map[string]interface{}) *EruA
 	extend["hostname"] = g.Config.HostName
 	extend["cid"] = container.ID[:12]
 	extend["ident"] = ident
+	tag := []string{}
+	for _, v := range extend {
+		tag = append(tag, fmt.Sprintf("%v", v))
+	}
 	endpoint := fmt.Sprintf("%s.%s", name, entrypoint)
 
 	meta := defines.Meta{container.ID, container.State.Pid, name, entrypoint, ident, extend}
