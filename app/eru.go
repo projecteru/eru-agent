@@ -6,13 +6,13 @@ import (
 	"sync"
 	"time"
 
+	"github.com/fsouza/go-dockerclient"
 	"github.com/projecteru/eru-agent/defines"
 	"github.com/projecteru/eru-agent/g"
 	"github.com/projecteru/eru-agent/logs"
 	"github.com/projecteru/eru-agent/utils"
-	"github.com/projecteru/eru-metric/falcon"
 	"github.com/projecteru/eru-metric/metric"
-	"github.com/fsouza/go-dockerclient"
+	"github.com/projecteru/eru-metric/statsd"
 )
 
 type EruApp struct {
@@ -29,23 +29,16 @@ func NewEruApp(container *docker.Container, extend map[string]interface{}) *EruA
 	logs.Debug("Eru App", name, entrypoint, ident)
 
 	transfer, _ := g.Transfers.Get(container.ID, 0)
-	client := falcon.CreateFalconClient(
-		transfer,
-		time.Duration(g.Config.Metrics.Timeout)*time.Millisecond,
-	)
+	client := statsd.CreateStatsDClient(transfer)
 
 	step := time.Duration(g.Config.Metrics.Step) * time.Second
 	extend["hostname"] = g.Config.HostName
 	extend["cid"] = container.ID[:12]
 	extend["ident"] = ident
-	tag := []string{}
-	for k, v := range extend {
-		tag = append(tag, fmt.Sprintf("%s=%v", k, v))
-	}
-	endpoint := fmt.Sprintf("%s-%s", name, entrypoint)
+	endpoint := fmt.Sprintf("%s.%s", name, entrypoint)
 
 	meta := defines.Meta{container.ID, container.State.Pid, name, entrypoint, ident, extend}
-	metric := metric.CreateMetric(step, client, strings.Join(tag, ","), endpoint)
+	metric := metric.CreateMetric(step, client, strings.Join(extend, "."), endpoint)
 	eruApp := &EruApp{meta, metric}
 	return eruApp
 }
