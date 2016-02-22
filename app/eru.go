@@ -42,7 +42,7 @@ func NewEruApp(container *docker.Container, extend map[string]interface{}) *EruA
 	endpoint := fmt.Sprintf("%s.%s", name, entrypoint)
 
 	meta := defines.Meta{container.ID, container.State.Pid, name, entrypoint, ident, extend}
-	metric := metric.CreateMetric(step, client, strings.Join(extend, "."), endpoint)
+	metric := metric.CreateMetric(step, client, strings.Join(tag, "."), endpoint)
 	eruApp := &EruApp{meta, metric}
 	return eruApp
 }
