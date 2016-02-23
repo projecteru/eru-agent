@@ -8,7 +8,7 @@ const (
 	VLAN_PREFIX = "vnbe"
 	DEFAULT_BR  = "eth0"
 
-	VERSION = "0.15"
+	VERSION = "0.15.1"
 
 	OOM_KILLED      = 1
 	DATETIME_FORMAT = "2006-01-02 15:04:05"
