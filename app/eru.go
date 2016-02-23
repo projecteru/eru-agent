@@ -41,11 +41,11 @@ func NewEruApp(container *docker.Container, extend map[string]interface{}) *EruA
 		for _, v := range extend {
 			tag = append(tag, fmt.Sprintf("%v", v))
 		}
-		tagString = fmt.Sprintf("%s.%s.%s.%s", g.Config.HostName, version, strings.Join(tag, "."), container.ID[:12])
+		tagString = fmt.Sprintf("%s.%s.%s", g.Config.HostName, strings.Join(tag, "."), container.ID[:12])
 	} else {
-		tagString = fmt.Sprintf("%s.%s.%s", g.Config.HostName, version, container.ID[:12])
+		tagString = fmt.Sprintf("%s.%s", g.Config.HostName, container.ID[:12])
 	}
-	endpoint := fmt.Sprintf("%s.%s", name, entrypoint)
+	endpoint := fmt.Sprintf("%s.%s.%s", name, version, entrypoint)
 
 	meta := defines.Meta{container.ID, container.State.Pid, name, entrypoint, ident, extend}
 	metric := metric.CreateMetric(step, client, tagString, endpoint)
