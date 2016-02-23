@@ -32,17 +32,23 @@ func NewEruApp(container *docker.Container, extend map[string]interface{}) *EruA
 	client := statsd.CreateStatsDClient(transfer)
 
 	step := time.Duration(g.Config.Metrics.Step) * time.Second
-	extend["hostname"] = g.Config.HostName
-	extend["cid"] = container.ID[:12]
-	extend["ident"] = ident
-	tag := []string{}
-	for _, v := range extend {
-		tag = append(tag, fmt.Sprintf("%v", v))
+	//TODO remove version meta data
+	version := extend["__version__"]
+	delete(extend, "__version__")
+	var tagString string
+	if len(extend) > 0 {
+		tag := []string{}
+		for _, v := range extend {
+			tag = append(tag, fmt.Sprintf("%v", v))
+		}
+		tagString = fmt.Sprintf("%s.%s.%s.%s", g.Config.HostName, version, strings.Join(tag, "."), container.ID[:12])
+	} else {
+		tagString = fmt.Sprintf("%s.%s.%s", g.Config.HostName, version, container.ID[:12])
 	}
 	endpoint := fmt.Sprintf("%s.%s", name, entrypoint)
 
 	meta := defines.Meta{container.ID, container.State.Pid, name, entrypoint, ident, extend}
-	metric := metric.CreateMetric(step, client, strings.Join(tag, "."), endpoint)
+	metric := metric.CreateMetric(step, client, tagString, endpoint)
 	eruApp := &EruApp{meta, metric}
 	return eruApp
 }
