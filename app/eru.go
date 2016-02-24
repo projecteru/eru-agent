@@ -28,7 +28,7 @@ func NewEruApp(container *docker.Container, extend map[string]interface{}) *EruA
 	}
 	logs.Debug("Eru App", name, entrypoint, ident)
 
-	transfer, _ := g.Transfers.Get(container.ID, 0)
+	transfer := g.Transfers.Get(container.ID, 0)
 	client := statsd.CreateStatsDClient(transfer)
 
 	step := time.Duration(g.Config.Metrics.Step) * time.Second
