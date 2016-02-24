@@ -43,14 +43,9 @@ func Streamer(route *defines.Route, logstream chan *defines.Log) {
 		}
 		var f bool = false
 		for offset := 0; offset < route.Backends.Len(); offset++ {
-			addr, err := route.Backends.Get(logline.Name, offset)
-			if err != nil {
-				logs.Info("Get backend failed", err, logline.Name, logline.Data)
-				break
-			}
+			addr := route.Backends.Get(logline.Name, offset)
 			if _, ok := upstreams[addr]; !ok {
 				if ups, err := NewUpStream(addr); err != nil || ups == nil {
-					route.Backends.Remove(addr)
 					continue
 				} else {
 					upstreams[addr] = ups

@@ -1,16 +1,13 @@
 package g
 
 import (
-	"github.com/CMGS/consistent"
 	"github.com/projecteru/eru-agent/logs"
+	"github.com/projecteru/eru-agent/utils"
 )
 
-var Transfers *consistent.Consistent
+var Transfers *utils.HashBackends
 
 func InitTransfers() {
-	Transfers = consistent.New()
-	for _, transfer := range Config.Metrics.Transfers {
-		Transfers.Add(transfer)
-	}
+	Transfers = utils.NewHashBackends(Config.Metrics.Transfers)
 	logs.Info("Transfers initiated")
 }

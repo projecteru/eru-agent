@@ -3,20 +3,17 @@ package network
 import (
 	"sync"
 
-	"github.com/CMGS/consistent"
 	"github.com/projecteru/eru-agent/g"
 	"github.com/projecteru/eru-agent/logs"
+	"github.com/projecteru/eru-agent/utils"
 	"github.com/vishvananda/netlink"
 )
 
-var Devices *consistent.Consistent
+var Devices *utils.HashBackends
 var lock sync.Mutex
 
 func InitVlan() {
-	Devices = consistent.New()
-	for _, device := range g.Config.VLan.Physical {
-		Devices.Add(device)
-	}
+	Devices = utils.NewHashBackends(g.Config.VLan.Physical)
 	logs.Info("Vlan initiated")
 }
 

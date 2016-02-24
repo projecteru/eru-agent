@@ -1,6 +1,6 @@
 package defines
 
-import "github.com/CMGS/consistent"
+import "github.com/projecteru/eru-agent/utils"
 
 type AttachEvent struct {
 	Type string
@@ -23,16 +23,13 @@ type Route struct {
 	ID       string  `json:"id"`
 	Source   *Source `json:"source,omitempty"`
 	Target   *Target `json:"target"`
-	Backends *consistent.Consistent
+	Backends *utils.HashBackends
 	Closer   chan bool
 	Done     chan struct{}
 }
 
 func (s *Route) LoadBackends() {
-	s.Backends = consistent.New()
-	for _, addr := range s.Target.Addrs {
-		s.Backends.Add(addr)
-	}
+	s.Backends = utils.NewHashBackends(s.Target.Addrs)
 }
 
 type Source struct {

@@ -77,7 +77,7 @@ func DelMacVlanDevice(vethName string) error {
 }
 
 func AddMacVlanDevice(vethName, seq string) (netlink.Link, error) {
-	device, _ := Devices.Get(seq, 0)
+	device := Devices.Get(seq, 0)
 	logs.Info("Add new macvlan device", vethName, device)
 
 	parent, err := netlink.LinkByName(device)
