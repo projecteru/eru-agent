@@ -6,7 +6,7 @@ Eru Agent
 Agent of Project Eru, for those reasons:
 
 1. Check containers status, if crashed, report to eru core.
-2. Get containers metrics, send to [Open-Falcon](https://github.com/open-falcon).
+2. Get containers metrics, send to [Graphite](http://graphite.wikidot.com/).
 3. Forwarding containers' log to remote collectors like syslog.
 4. Support macvlan and calico SDN.
 
