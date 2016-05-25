@@ -7,15 +7,18 @@ import (
 	"os"
 	"runtime/pprof"
 
+	"golang.org/x/net/context"
+
 	_ "net/http/pprof"
 
+	"github.com/bmizerany/pat"
 	"github.com/projecteru/eru-agent/app"
 	"github.com/projecteru/eru-agent/common"
 	"github.com/projecteru/eru-agent/g"
 	"github.com/projecteru/eru-agent/lenz"
-	"github.com/projecteru/eru-agent/logs"
 	"github.com/projecteru/eru-agent/network"
-	"github.com/bmizerany/pat"
+
+	log "github.com/Sirupsen/logrus"
 )
 
 // URL /version/
@@ -63,7 +66,7 @@ func releaseEIP(req *Request) (int, interface{}) {
 		vethName := fmt.Sprintf("%s%d", common.VLAN_PREFIX, eip.ID)
 		if err := network.DelMacVlanDevice(vethName); err != nil {
 			rv = append(rv, Result{Succ: 0, Veth: vethName, Err: err.Error()})
-			logs.Info("Release EIP failed", err, vethName)
+			log.Errorf("Release EIP failed %s %s", err, vethName)
 			continue
 		}
 		rv = append(rv, Result{Succ: 1, Veth: vethName})
@@ -97,21 +100,21 @@ func bindEIP(req *Request) (int, interface{}) {
 		veth, err := network.AddMacVlanDevice(vethName, vethName)
 		if err != nil {
 			rv = append(rv, Result{Succ: 0, IP: eip.IP, Err: err.Error()})
-			logs.Info("API add EIP failed", err)
+			log.Errorf("API add EIP failed %s", err)
 			continue
 		}
 
 		if err := network.BindAndSetup(veth, eip.IP); err != nil {
 			rv = append(rv, Result{Succ: 0, IP: eip.IP, Err: err.Error()})
 			network.DelVlan(veth)
-			logs.Info("API bind EIP failed", err)
+			log.Errorf("API bind EIP failed %s", err)
 			continue
 		}
 
 		if err := network.SetBroadcast(vethName, eip.Broadcast); err != nil {
 			rv = append(rv, Result{Succ: 0, IP: eip.IP, Err: err.Error()})
 			network.DelVlan(veth)
-			logs.Info("API set broadcast failed", err)
+			log.Errorf("API set broadcast failed %s", err)
 			continue
 		}
 
@@ -188,7 +191,7 @@ func addCalicoForContainer(req *Request) (int, interface{}) {
 		vethName := fmt.Sprintf("%s%d.%d", common.VLAN_PREFIX, endpoint.Nid, seq)
 		if err := network.AddCalico(env, endpoint.Append, cid, vethName, endpoint.IP); err != nil {
 			rv = append(rv, Result{Succ: 0, ContainerID: cid, IP: endpoint.IP, Err: err.Error()})
-			logs.Info("API calico add interface failed", err)
+			log.Errorf("API calico add interface failed %s", err)
 			continue
 		}
 
@@ -196,7 +199,7 @@ func addCalicoForContainer(req *Request) (int, interface{}) {
 		// currently only one profile is used
 		if err := network.BindCalicoProfile(env, cid, endpoint.Profile); err != nil {
 			rv = append(rv, Result{Succ: 0, ContainerID: cid, IP: endpoint.IP, Err: err.Error()})
-			logs.Info("API calico add profile failed", err)
+			log.Errorf("API calico add profile failed %s", err)
 			continue
 		}
 
@@ -220,7 +223,7 @@ func publishContainer(req *Request) (int, interface{}) {
 	}
 
 	if err := network.AddPrerouting(info.EIP, info.Dest, info.Ident); err != nil {
-		logs.Info("Public application failed", err)
+		log.Errorf("Public application failed %s", err)
 		return http.StatusBadRequest, JSON{"message": "publish application failed"}
 	}
 	return http.StatusOK, JSON{"message": "ok"}
@@ -241,7 +244,7 @@ func unpublishContainer(req *Request) (int, interface{}) {
 	}
 
 	if err := network.DelPrerouting(info.EIP, info.Dest, info.Ident); err != nil {
-		logs.Info("Diable application failed", err)
+		log.Errorf("Diable application failed %s", err)
 		return http.StatusBadRequest, JSON{"message": "disable application failed"}
 	}
 	return http.StatusOK, JSON{"message": "ok"}
@@ -261,7 +264,7 @@ func addRouteForContainer(req *Request) (int, interface{}) {
 		return http.StatusBadRequest, JSON{"message": "wrong JSON format"}
 	}
 	if !network.AddRoute(cid, data.CIDR, data.Interface) {
-		logs.Info("Add route failed")
+		log.Info("Add route failed")
 		return http.StatusServiceUnavailable, JSON{"message": "add route failed"}
 	}
 	return http.StatusOK, JSON{"message": "ok"}
@@ -280,7 +283,7 @@ func setRouteForContainer(req *Request) (int, interface{}) {
 		return http.StatusBadRequest, JSON{"message": "wrong JSON format"}
 	}
 	if !network.SetDefaultRoute(cid, data.IP) {
-		logs.Info("Set default route failed")
+		log.Info("Set default route failed")
 		return http.StatusServiceUnavailable, JSON{"message": "set default route failed"}
 	}
 	return http.StatusOK, JSON{"message": "ok"}
@@ -306,10 +309,11 @@ func addNewContainer(req *Request) (int, interface{}) {
 		if app.Valid(data.ContainerID) {
 			break
 		}
-		logs.Info("API status watch", data.ContainerID)
-		container, err := g.Docker.InspectContainer(data.ContainerID)
+		log.Infof("API status watch %s", data.ContainerID)
+		ctx := context.Background()
+		container, err := g.Docker.ContainerInspect(ctx, data.ContainerID)
 		if err != nil {
-			logs.Info("API status inspect docker failed", err)
+			log.Errorf("API status inspect docker failed %s", err)
 			break
 		}
 		if eruApp := app.NewEruApp(container, data.Meta); eruApp != nil {
@@ -349,9 +353,9 @@ func HTTPServe() {
 	}
 
 	http.Handle("/", restfulAPIServer)
-	logs.Info("API http server start at", g.Config.API.Addr)
+	log.Infof("API http server start at %s", g.Config.API.Addr)
 	err := http.ListenAndServe(g.Config.API.Addr, nil)
 	if err != nil {
-		logs.Assert(err, "ListenAndServe: ")
+		log.Panicf("Http api failed %s", err)
 	}
 }

@@ -1,26 +1,29 @@
 package network
 
 import (
+	log "github.com/Sirupsen/logrus"
 	"github.com/projecteru/eru-agent/g"
-	"github.com/projecteru/eru-agent/logs"
+	"golang.org/x/net/context"
 )
 
 func SetDefaultRoute(cid, gateway string) bool {
-	_, err := g.Docker.InspectContainer(cid)
+	ctx := context.Background()
+	_, err := g.Docker.ContainerInspect(ctx, cid)
 	if err != nil {
-		logs.Info("VLanSetter inspect docker failed", err)
+		log.Errorf("VLanSetter inspect docker failed %s", err)
 		return false
 	}
-	logs.Info("Set default route success", cid, gateway)
+	log.Infof("Set default route success %s %s", cid, gateway)
 	return true
 }
 
 func AddRoute(cid, CIDR string, ifc string) bool {
-	_, err := g.Docker.InspectContainer(cid)
+	ctx := context.Background()
+	_, err := g.Docker.ContainerInspect(ctx, cid)
 	if err != nil {
-		logs.Info("VLanSetter inspect docker failed", err)
+		log.Errorf("VLanSetter inspect docker failed %s", err)
 		return false
 	}
-	logs.Info("Add route success", cid, CIDR, ifc)
+	log.Infof("Add route success %s %s %s", cid, CIDR, ifc)
 	return true
 }

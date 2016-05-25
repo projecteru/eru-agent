@@ -3,8 +3,8 @@ package network
 import (
 	"sync"
 
+	log "github.com/Sirupsen/logrus"
 	"github.com/projecteru/eru-agent/g"
-	"github.com/projecteru/eru-agent/logs"
 	"github.com/projecteru/eru-agent/utils"
 	"github.com/vishvananda/netlink"
 )
@@ -14,11 +14,11 @@ var lock sync.Mutex
 
 func InitVlan() {
 	Devices = utils.NewHashBackends(g.Config.VLan.Physical)
-	logs.Info("Vlan initiated")
+	log.Info("Vlan initiated")
 }
 
 func DelVlan(link netlink.Link) {
 	if err := netlink.LinkDel(link); err != nil {
-		logs.Debug("Delete device failed", err)
+		log.Errorf("Delete device failed %s", err)
 	}
 }

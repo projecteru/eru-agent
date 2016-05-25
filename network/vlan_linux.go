@@ -4,8 +4,10 @@ import (
 	"os/exec"
 	"runtime"
 
+	"golang.org/x/net/context"
+
+	log "github.com/Sirupsen/logrus"
 	"github.com/projecteru/eru-agent/g"
-	"github.com/projecteru/eru-agent/logs"
 	"github.com/vishvananda/netlink"
 	"github.com/vishvananda/netns"
 )
@@ -16,14 +18,14 @@ func setUpVLan(cid, ips string, pid int, veth netlink.Link) bool {
 
 	origns, err := netns.Get()
 	if err != nil {
-		logs.Info("Get orignal namespace failed", err)
+		log.Errorf("Get orignal namespace failed %s", err)
 		return false
 	}
 	defer origns.Close()
 
 	ns, err := netns.GetFromPid(pid)
 	if err != nil {
-		logs.Info("Get container namespace failed", err)
+		log.Errorf("Get container namespace failed %s", err)
 		return false
 	}
 
@@ -32,12 +34,12 @@ func setUpVLan(cid, ips string, pid int, veth netlink.Link) bool {
 	defer netns.Set(origns)
 
 	if err := BindAndSetup(veth, ips); err != nil {
-		logs.Info("Bind and setup NIC failed", err)
+		log.Errorf("Bind and setup NIC failed %s", err)
 		DelVlan(veth)
 		return false
 	}
 
-	logs.Info("Add vlan device success", cid[:12])
+	log.Infof("Add vlan device success %s", cid[:12])
 	return true
 }
 
@@ -45,20 +47,21 @@ func AddVlan(vethName, ips, cid string) bool {
 	lock.Lock()
 	defer lock.Unlock()
 
-	container, err := g.Docker.InspectContainer(cid)
+	ctx := context.Background()
+	container, err := g.Docker.ContainerInspect(ctx, cid)
 	if err != nil {
-		logs.Info("VLanSetter inspect docker failed", err)
+		log.Errorf("VLanSetter inspect docker failed %s", err)
 		return false
 	}
 
 	veth, err := AddMacVlanDevice(vethName, cid)
 	if err != nil {
-		logs.Info("Create macvlan device failed", err)
+		log.Errorf("Create macvlan device failed %s", err)
 		return false
 	}
 
 	if err := netlink.LinkSetNsPid(veth, container.State.Pid); err != nil {
-		logs.Info("Set macvlan device into container failed", err)
+		log.Errorf("Set macvlan device into container failed %s", err)
 		DelVlan(veth)
 		return false
 	}
@@ -67,7 +70,7 @@ func AddVlan(vethName, ips, cid string) bool {
 }
 
 func DelMacVlanDevice(vethName string) error {
-	logs.Info("Release macvlan device", vethName)
+	log.Infof("Release macvlan device %s", vethName)
 	link, err := netlink.LinkByName(vethName)
 	if err != nil {
 		return err
@@ -78,7 +81,7 @@ func DelMacVlanDevice(vethName string) error {
 
 func AddMacVlanDevice(vethName, seq string) (netlink.Link, error) {
 	device := Devices.Get(seq, 0)
-	logs.Info("Add new macvlan device", vethName, device)
+	log.Info("Add new macvlan device %s %s", vethName, device)
 
 	parent, err := netlink.LinkByName(device)
 	if err != nil {

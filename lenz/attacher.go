@@ -10,8 +10,11 @@ import (
 	"github.com/projecteru/eru-agent/common"
 	"github.com/projecteru/eru-agent/defines"
 	"github.com/projecteru/eru-agent/g"
-	"github.com/projecteru/eru-agent/logs"
-	"github.com/fsouza/go-dockerclient"
+
+	"github.com/docker/engine-api/types"
+	"golang.org/x/net/context"
+
+	log "github.com/Sirupsen/logrus"
 )
 
 type AttachManager struct {
@@ -34,27 +37,30 @@ func (m *AttachManager) Attached(id string) bool {
 }
 
 func (m *AttachManager) Attach(app *defines.Meta) {
-	// Not Thread Safe
+	//TODO Not Thread Safe
 	if m.Attached(app.ID) {
 		return
 	}
-	outrd, outwr := io.Pipe()
-	errrd, errwr := io.Pipe()
+
+	outr, outw := io.Pipe()
 	go func() {
-		err := g.Docker.AttachToContainer(docker.AttachToContainerOptions{
-			Container:    app.ID,
-			OutputStream: outwr,
-			ErrorStream:  errwr,
-			Stdin:        false,
-			Stdout:       true,
-			Stderr:       true,
-			Stream:       true,
-		})
-		outwr.Close()
-		errwr.Close()
-		logs.Debug("Lenz Attach", app.ID[:12], "finished")
+		ctx := context.Background()
+		options := types.ContainerAttachOptions{
+			Stream: true,
+			Stdin:  false,
+			Stdout: true,
+			Stderr: true,
+		}
+		resp, err := g.Docker.ContainerAttach(ctx, app.ID, options)
 		if err != nil {
-			logs.Debug("Lenz Attach", app.ID, "failure:", err)
+			log.Errorf("Lenz Attach %s failed %s", app.ID[:12], err)
+			return
+		}
+		_, err = io.Copy(outw, resp)
+		outw.Close()
+		log.Debugf("Lenz Attach %s finished", app.ID[:12])
+		if err != nil {
+			log.Errorf("Lenz Attach get stream failed %s", err)
 		}
 		m.send(&defines.AttachEvent{Type: "detach", App: app})
 		m.Lock()
@@ -62,10 +68,10 @@ func (m *AttachManager) Attach(app *defines.Meta) {
 		delete(m.attached, app.ID)
 	}()
 	m.Lock()
-	m.attached[app.ID] = NewLogPump(outrd, errrd, app)
+	m.attached[app.ID] = NewLogPump(outr, app)
 	m.Unlock()
 	m.send(&defines.AttachEvent{Type: "attach", App: app})
-	logs.Debug("Lenz Attach", app.ID[:12], "success")
+	log.Debugf("Lenz Attach %s success", app.ID[:12])
 }
 
 func (m *AttachManager) send(event *defines.AttachEvent) {
@@ -137,7 +143,7 @@ type LogPump struct {
 	channels map[chan *defines.Log]struct{}
 }
 
-func NewLogPump(stdout, stderr io.Reader, app *defines.Meta) *LogPump {
+func NewLogPump(stream io.Reader, app *defines.Meta) *LogPump {
 	obj := &LogPump{
 		app:      app,
 		channels: make(map[chan *defines.Log]struct{}),
@@ -148,7 +154,7 @@ func NewLogPump(stdout, stderr io.Reader, app *defines.Meta) *LogPump {
 			data, err := buf.ReadBytes('\n')
 			if err != nil {
 				if err != io.EOF {
-					logs.Debug("Lenz Pump:", app.ID, typ, err)
+					log.Errorf("Lenz Pump: %s %s %s", app.ID, typ, err)
 				}
 				return
 			}
@@ -163,8 +169,7 @@ func NewLogPump(stdout, stderr io.Reader, app *defines.Meta) *LogPump {
 			})
 		}
 	}
-	go pump("stdout", stdout)
-	go pump("stderr", stderr)
+	go pump("stream", stream)
 	return obj
 }
 

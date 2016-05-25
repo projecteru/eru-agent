@@ -8,12 +8,12 @@ import (
 	"github.com/projecteru/eru-agent/api"
 	"github.com/projecteru/eru-agent/app"
 	"github.com/projecteru/eru-agent/g"
-	"github.com/projecteru/eru-agent/health"
 	"github.com/projecteru/eru-agent/lenz"
-	"github.com/projecteru/eru-agent/logs"
 	"github.com/projecteru/eru-agent/network"
 	"github.com/projecteru/eru-agent/status"
 	"github.com/projecteru/eru-agent/utils"
+
+	log "github.com/Sirupsen/logrus"
 )
 
 func main() {
@@ -34,7 +34,6 @@ func main() {
 	app.Metric()
 	api.Serve()
 	status.Start()
-	health.Check()
 
 	var c = make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
@@ -42,5 +41,13 @@ func main() {
 	signal.Notify(c, syscall.SIGHUP)
 	signal.Notify(c, syscall.SIGKILL)
 	signal.Notify(c, syscall.SIGQUIT)
-	logs.Info("Eru Agent Catch", <-c)
+	for {
+		select {
+		case s <- c:
+			log.Infof("Eru Agent Catch %s", <-c)
+			break
+		case e <- g.ErrChan:
+			log.Panicf("Eru Agent Error %s", e)
+		}
+	}
 }

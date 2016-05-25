@@ -11,8 +11,8 @@ import (
 	"strconv"
 	"strings"
 
+	log "github.com/Sirupsen/logrus"
 	"github.com/projecteru/eru-agent/common"
-	"github.com/projecteru/eru-agent/logs"
 )
 
 func NewHashBackends(data []string) *HashBackends {
@@ -59,7 +59,7 @@ func UrlJoin(strs ...string) string {
 
 func WritePid(path string) {
 	if err := ioutil.WriteFile(path, []byte(strconv.Itoa(os.Getpid())), 0755); err != nil {
-		logs.Assert(err, "Save pid file failed")
+		log.Panicf("Save pid file failed %s", err)
 	}
 }
 
@@ -135,7 +135,7 @@ func CopyFile(source string, dest string) (err error) {
 func Marshal(obj interface{}) []byte {
 	bytes, err := json.MarshalIndent(obj, "", "  ")
 	if err != nil {
-		logs.Info("Utils Marshal:", err)
+		log.Errorf("Utils Marshal %s", err)
 	}
 	return bytes
 }
@@ -173,19 +173,19 @@ func Atoi(s string, def int) int {
 func DoPut(url string) {
 	req, err := http.NewRequest("PUT", url, nil)
 	if err != nil {
-		logs.Debug("Gen request failed", err)
+		log.Errorf("Gen request failed %s", err)
 		return
 	}
 	response, err := httpClient.Do(req)
 	if err != nil {
-		logs.Debug("Do request failed", err)
+		log.Errorf("Do request failed %s", err)
 		return
 	}
 	defer response.Body.Close()
 	data, err := ioutil.ReadAll(response.Body)
 	if err != nil {
-		logs.Debug("Read response failed", err)
+		log.Errorf("Read response failed %s", err)
 		return
 	}
-	logs.Debug("Response:", string(data))
+	log.Debugf("Response %s", string(data))
 }

@@ -8,8 +8,9 @@ import (
 
 	"github.com/projecteru/eru-agent/common"
 	"github.com/projecteru/eru-agent/defines"
-	"github.com/projecteru/eru-agent/logs"
 	"github.com/projecteru/eru-agent/utils"
+
+	log "github.com/Sirupsen/logrus"
 )
 
 type RouteStore interface {
@@ -103,7 +104,7 @@ func (rm *RouteManager) Add(route *defines.Route) error {
 	}()
 	if rm.persistor != nil {
 		if err := rm.persistor.Add(route); err != nil {
-			logs.Info("Lenz Persistor:", err)
+			log.Errorf("Lenz Persistor %s", err)
 		}
 	}
 	return nil
