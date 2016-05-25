@@ -23,8 +23,8 @@ func (self *EruApp) Report() {
 	t := time.NewTicker(self.Step)
 	defer t.Stop()
 	defer self.Client.Close()
-	defer log.Infof(self.Name, self.EntryPoint, self.ID[:12], "%s %s %s metrics report stop")
-	log.Infof(self.Name, self.EntryPoint, self.ID[:12], "%s %s %s metrics report start")
+	defer log.Infof("%s %s %s metrics report stop", self.Name, self.EntryPoint, self.ID[:12])
+	log.Infof("%s %s %s metrics report start", self.Name, self.EntryPoint, self.ID[:12])
 	for {
 		select {
 		case now := <-t.C:

@@ -45,7 +45,7 @@ func main() {
 		select {
 		case s := <-c:
 			log.Infof("Eru Agent Catch %s", s)
-			break
+			os.Exit(0)
 		case e := <-g.ErrChan:
 			log.Panicf("Eru Agent Error %s", e)
 		}
