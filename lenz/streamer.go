@@ -39,7 +39,7 @@ func Streamer(route *defines.Route, logstream chan *defines.Log) {
 		logline.Tag = route.Target.AppendTag
 		logline.Count = count
 		if g.Config.Lenz.Stdout {
-			log.Infof("Debug Output %s", logline)
+			log.Infof("Debug Output %v", logline)
 			continue
 		}
 		var f bool = false
