@@ -43,10 +43,10 @@ func main() {
 	signal.Notify(c, syscall.SIGQUIT)
 	for {
 		select {
-		case s <- c:
-			log.Infof("Eru Agent Catch %s", <-c)
+		case s := <-c:
+			log.Infof("Eru Agent Catch %s", s)
 			break
-		case e <- g.ErrChan:
+		case e := <-g.ErrChan:
 			log.Panicf("Eru Agent Error %s", e)
 		}
 	}

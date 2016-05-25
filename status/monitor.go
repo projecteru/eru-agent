@@ -9,6 +9,7 @@ import (
 
 	"github.com/docker/engine-api/types"
 	"github.com/docker/engine-api/types/filters"
+	"github.com/projecteru/eru-agent/g"
 	"golang.org/x/net/context"
 )
 
@@ -35,7 +36,7 @@ func MonitorContainerEvents(errChan chan<- error, c chan eventtypes.Message) {
 	options := types.EventsOptions{
 		Filters: f,
 	}
-	resBody, err := cli.Events(ctx, options)
+	resBody, err := g.Docker.Events(ctx, options)
 	// Whether we successfully subscribed to events or not, we can now
 	// unblock the main goroutine.
 	if err != nil {

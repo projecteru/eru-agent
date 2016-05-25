@@ -17,7 +17,7 @@ import (
 
 func load() {
 	ctx := context.Background()
-	options := types.ContainerListOptions{All: *all}
+	options := types.ContainerListOptions{All: true}
 	containers, err := g.Docker.ContainerList(ctx, options)
 	if err != nil {
 		log.Panicf("Status get all containers failed %s", err)

@@ -23,8 +23,8 @@ func Streamer(route *defines.Route, logstream chan *defines.Log) {
 		log.Debugf("Flush %s cache logs", route.ID)
 		for _, remote := range upstreams {
 			remote.Flush()
-			for _, log := range remote.Tail() {
-				log.Infof("Streamer can't send to remote %s", log)
+			for _, msg := range remote.Tail() {
+				log.Infof("Streamer can't send to remote %s", msg)
 			}
 			remote.Close()
 		}

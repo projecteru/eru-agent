@@ -32,19 +32,19 @@ func Start() {
 }
 
 func handleContainerStart(event eventtypes.Message) {
-	log.Debugf("Status start %s %s", e.ID[:12], e.From)
+	log.Debugf("Status start %s %s", event.ID[:12], event.From)
 	ctx := context.Background()
 	if meta := getContainerMeta(event.ID); meta != nil && !app.Valid(event.ID) {
 		//TODO use global docker
-		container, err := g.Docker.ContainerInspect(ctx, container.ID)
+		container, err := g.Docker.ContainerInspect(ctx, event.ID)
 		if err != nil {
 			log.Errorf("Status inspect docker failed %s", err)
-			break
+			return
 		}
 		eruApp := app.NewEruApp(container, meta)
 		if eruApp == nil {
 			log.Info("Create EruApp failed")
-			break
+			return
 		}
 		lenz.Attacher.Attach(&eruApp.Meta)
 		app.Add(eruApp)

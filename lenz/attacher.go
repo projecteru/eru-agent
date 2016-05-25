@@ -56,7 +56,8 @@ func (m *AttachManager) Attach(app *defines.Meta) {
 			log.Errorf("Lenz Attach %s failed %s", app.ID[:12], err)
 			return
 		}
-		_, err = io.Copy(outw, resp)
+		defer resp.Close()
+		_, err = io.Copy(outw, resp.Reader)
 		outw.Close()
 		log.Debugf("Lenz Attach %s finished", app.ID[:12])
 		if err != nil {
