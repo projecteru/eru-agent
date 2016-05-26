@@ -41,13 +41,11 @@ func main() {
 	signal.Notify(c, syscall.SIGHUP)
 	signal.Notify(c, syscall.SIGKILL)
 	signal.Notify(c, syscall.SIGQUIT)
-	for {
-		select {
-		case s := <-c:
-			log.Infof("Eru Agent Catch %s", s)
-			os.Exit(0)
-		case e := <-g.ErrChan:
-			log.Panicf("Eru Agent Error %s", e)
-		}
+	select {
+	case s := <-c:
+		log.Infof("Eru Agent Catch %s", s)
+		os.Exit(0)
+	case e := <-g.ErrChan:
+		log.Panicf("Eru Agent Error %s", e)
 	}
 }

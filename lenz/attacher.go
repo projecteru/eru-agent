@@ -3,6 +3,7 @@ package lenz
 import (
 	"bufio"
 	"io"
+	"net/http/httputil"
 	"strings"
 	"sync"
 	"time"
@@ -11,6 +12,7 @@ import (
 	"github.com/projecteru/eru-agent/defines"
 	"github.com/projecteru/eru-agent/g"
 
+	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/docker/engine-api/types"
 	"golang.org/x/net/context"
 
@@ -43,6 +45,7 @@ func (m *AttachManager) Attach(app *defines.Meta) {
 	}
 
 	outr, outw := io.Pipe()
+	errr, errw := io.Pipe()
 	go func() {
 		ctx := context.Background()
 		options := types.ContainerAttachOptions{
@@ -52,13 +55,14 @@ func (m *AttachManager) Attach(app *defines.Meta) {
 			Stderr: true,
 		}
 		resp, err := g.Docker.ContainerAttach(ctx, app.ID, options)
-		if err != nil {
+		if err != nil && err != httputil.ErrPersistEOF {
 			log.Errorf("Lenz Attach %s failed %s", app.ID[:12], err)
 			return
 		}
 		defer resp.Close()
-		_, err = io.Copy(outw, resp.Reader)
+		_, err = stdcopy.StdCopy(outw, errw, resp.Reader)
 		outw.Close()
+		errw.Close()
 		log.Debugf("Lenz Attach %s finished", app.ID[:12])
 		if err != nil {
 			log.Errorf("Lenz Attach get stream failed %s", err)
@@ -69,7 +73,7 @@ func (m *AttachManager) Attach(app *defines.Meta) {
 		delete(m.attached, app.ID)
 	}()
 	m.Lock()
-	m.attached[app.ID] = NewLogPump(outr, app)
+	m.attached[app.ID] = NewLogPump(outr, errr, app)
 	m.Unlock()
 	m.send(&defines.AttachEvent{Type: "attach", App: app})
 	log.Debugf("Lenz Attach %s success", app.ID[:12])
@@ -144,7 +148,7 @@ type LogPump struct {
 	channels map[chan *defines.Log]struct{}
 }
 
-func NewLogPump(stream io.Reader, app *defines.Meta) *LogPump {
+func NewLogPump(stdout, stderr io.Reader, app *defines.Meta) *LogPump {
 	obj := &LogPump{
 		app:      app,
 		channels: make(map[chan *defines.Log]struct{}),
@@ -170,7 +174,8 @@ func NewLogPump(stream io.Reader, app *defines.Meta) *LogPump {
 			})
 		}
 	}
-	go pump("stream", stream)
+	go pump("stdout", stdout)
+	go pump("stderr", stderr)
 	return obj
 }
 
