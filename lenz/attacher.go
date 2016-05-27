@@ -156,7 +156,7 @@ func NewLogPump(stdout, stderr io.Reader, app *defines.Meta) *LogPump {
 	pump := func(typ string, source io.Reader) {
 		buf := bufio.NewReader(source)
 		for {
-			data, err := buf.ReadBytes('\n')
+			data, err := buf.ReadString('\n')
 			if err != nil {
 				if err != io.EOF {
 					log.Errorf("Lenz Pump: %s %s %s", app.ID, typ, err)
@@ -164,7 +164,7 @@ func NewLogPump(stdout, stderr io.Reader, app *defines.Meta) *LogPump {
 				return
 			}
 			obj.send(&defines.Log{
-				Data:       strings.TrimSuffix(string(data), "\n"),
+				Data:       strings.TrimSuffix(data, "\n"),
 				ID:         app.ID,
 				Name:       app.Name,
 				EntryPoint: app.EntryPoint,
