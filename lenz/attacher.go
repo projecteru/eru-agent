@@ -60,9 +60,9 @@ func (m *AttachManager) Attach(app *defines.Meta) {
 			return
 		}
 		defer resp.Close()
+		defer outw.Close()
+		defer errw.Close()
 		_, err = stdcopy.StdCopy(outw, errw, resp.Reader)
-		outw.Close()
-		errw.Close()
 		log.Debugf("Lenz Attach %s finished", app.ID[:12])
 		if err != nil {
 			log.Errorf("Lenz Attach get stream failed %s", err)
