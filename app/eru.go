@@ -19,6 +19,7 @@ import (
 type EruApp struct {
 	defines.Meta
 	metric.Metric
+	sync.Mutex
 }
 
 func NewEruApp(container types.ContainerJSON, extend map[string]interface{}) *EruApp {
@@ -50,11 +51,11 @@ func NewEruApp(container types.ContainerJSON, extend map[string]interface{}) *Er
 
 	meta := defines.Meta{container.ID, container.State.Pid, name, entrypoint, ident, extend}
 	metric := metric.CreateMetric(step, client, tagString, endpoint)
-	eruApp := &EruApp{meta, metric}
+	eruApp := &EruApp{meta, metric, sync.Mutex{}}
 	return eruApp
 }
 
-var lock sync.RWMutex
+var lock sync.RWMutex = sync.RWMutex{}
 var Apps map[string]*EruApp = map[string]*EruApp{}
 
 func Add(app *EruApp) {
@@ -78,7 +79,10 @@ func Remove(ID string) {
 	if _, ok := Apps[ID]; !ok {
 		return
 	}
-	Apps[ID].Exit()
+	app := Apps[ID]
+	app.Lock()
+	defer app.Unlock()
+	app.Exit()
 	delete(Apps, ID)
 }
 

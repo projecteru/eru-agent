@@ -8,7 +8,7 @@ const (
 	VLAN_PREFIX = "vnbe"
 	DEFAULT_BR  = "eth0"
 
-	VERSION            = "0.16"
+	VERSION            = "0.16.1"
 	DOCKER_CLI_VERSION = "v1.22"
 
 	OOM_KILLED      = 1

@@ -29,6 +29,8 @@ func (self *EruApp) Report() {
 		select {
 		case now := <-t.C:
 			go func() {
+				self.Lock()
+				defer self.Unlock()
 				if info, err := self.UpdateStats(self.ID); err == nil {
 					if isLimit {
 						limitChan <- SoftLimit{self.ID, info}
