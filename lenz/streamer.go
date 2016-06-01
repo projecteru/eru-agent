@@ -5,7 +5,8 @@ import (
 
 	"github.com/projecteru/eru-agent/defines"
 	"github.com/projecteru/eru-agent/g"
-	"github.com/projecteru/eru-agent/logs"
+
+	log "github.com/Sirupsen/logrus"
 )
 
 func Streamer(route *defines.Route, logstream chan *defines.Log) {
@@ -19,11 +20,11 @@ func Streamer(route *defines.Route, logstream chan *defines.Log) {
 		}
 	}
 	defer func() {
-		logs.Debug("Flush", route.ID, "cache logs")
+		log.Debugf("Flush %s cache logs", route.ID)
 		for _, remote := range upstreams {
 			remote.Flush()
-			for _, log := range remote.Tail() {
-				logs.Info("Streamer can't send to remote", log)
+			for _, msg := range remote.Tail() {
+				log.Infof("Streamer can't send to remote %s", msg)
 			}
 			remote.Close()
 		}
@@ -38,7 +39,7 @@ func Streamer(route *defines.Route, logstream chan *defines.Log) {
 		logline.Tag = route.Target.AppendTag
 		logline.Count = count
 		if g.Config.Lenz.Stdout {
-			logs.Info("Debug Output", logline)
+			log.Infof("Debug Output %v", logline)
 			continue
 		}
 		var f bool = false
@@ -53,7 +54,7 @@ func Streamer(route *defines.Route, logstream chan *defines.Log) {
 			}
 			f = true
 			if err := upstreams[addr].WriteData(logline); err != nil {
-				logs.Info("Sent to remote failed", err)
+				log.Errorf("Sent to remote failed %s", err)
 				upstreams[addr].Close()
 				go func(upstream *UpStream) {
 					for _, log := range upstream.Tail() {
@@ -63,11 +64,11 @@ func Streamer(route *defines.Route, logstream chan *defines.Log) {
 				delete(upstreams, addr)
 				continue
 			}
-			//logs.Debug("Lenz Send", logline.Name, logline.EntryPoint, logline.ID, "to", addr)
+			//log.Debugf("Lenz Send %s %s %s to %s", logline.Name, logline.EntryPoint, logline.ID, addr)
 			break
 		}
 		if !f {
-			logs.Info("Lenz failed", logline.ID[:12], logline.Name, logline.EntryPoint, logline.Data)
+			log.Infof("Lenz failed %s %s %s %s", logline.ID[:12], logline.Name, logline.EntryPoint, logline.Data)
 		}
 		if count == math.MaxInt64 {
 			count = 0

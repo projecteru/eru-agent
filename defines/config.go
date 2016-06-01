@@ -2,10 +2,6 @@ package defines
 
 type DockerConfig struct {
 	Endpoint string
-	Ca       string
-	Key      string
-	Cert     string
-	Health   int
 }
 
 type EruConfig struct {

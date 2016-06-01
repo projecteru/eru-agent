@@ -11,7 +11,8 @@ import (
 
 	"github.com/projecteru/eru-agent/defines"
 	"github.com/projecteru/eru-agent/g"
-	"github.com/projecteru/eru-agent/logs"
+
+	log "github.com/Sirupsen/logrus"
 )
 
 type UpStream struct {
@@ -28,7 +29,7 @@ type UpStream struct {
 func NewUpStream(addr string) (up *UpStream, err error) {
 	u, err := url.Parse(addr)
 	if err != nil {
-		logs.Info("Parse upstream addr failed", err)
+		log.Errorf("Parse upstream addr failed %s", err)
 		return nil, err
 	}
 	up = &UpStream{addr: u.Host}
@@ -41,7 +42,7 @@ func NewUpStream(addr string) (up *UpStream, err error) {
 			if up.count < g.Config.Lenz.Count {
 				return nil
 			}
-			//logs.Debug("Streamer buffer full, send to remote")
+			log.Debug("Streamer buffer full, send to remote")
 			return up.Flush()
 		}
 	} else {
@@ -67,12 +68,12 @@ func (self *UpStream) createUDPConn() error {
 	self.scheme = "udp"
 	udpAddr, err := net.ResolveUDPAddr("udp", self.addr)
 	if err != nil {
-		logs.Info("Resolve", self.addr, "failed", err)
+		log.Errorf("Resolve %s failed %s", self.addr, err)
 		return err
 	}
 	conn, err := net.DialUDP("udp", nil, udpAddr)
 	if err != nil {
-		logs.Info("Connect backend failed", err)
+		log.Errorf("Connect backend failed %s", err)
 		return err
 	}
 	self.conn = conn
@@ -85,12 +86,12 @@ func (self *UpStream) createTCPConn() error {
 	self.scheme = "tcp"
 	tcpAddr, err := net.ResolveTCPAddr("tcp", self.addr)
 	if err != nil {
-		logs.Info("Resolve", self.addr, "failed", err)
+		log.Errorf("Resolve %s failed %s", self.addr, err)
 		return err
 	}
 	conn, err := net.DialTCP("tcp", nil, tcpAddr)
 	if err != nil {
-		logs.Debug("Connect backend failed", err)
+		log.Errorf("Connect backend failed %s", err)
 		return err
 	}
 	self.conn = conn

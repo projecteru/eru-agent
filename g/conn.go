@@ -3,13 +3,16 @@ package g
 import (
 	"fmt"
 
-	"github.com/projecteru/eru-agent/defines"
-	"github.com/projecteru/eru-agent/logs"
+	"github.com/docker/engine-api/client"
 	"github.com/keimoon/gore"
+	"github.com/projecteru/eru-agent/defines"
+
+	log "github.com/Sirupsen/logrus"
 )
 
-var Docker defines.ContainerManager
+var Docker *client.Client
 var Rds *gore.Pool
+var ErrChan chan error
 
 func InitialConn() {
 	var err error
@@ -20,29 +23,26 @@ func InitialConn() {
 
 	redisHost := fmt.Sprintf("%s:%d", Config.Redis.Host, Config.Redis.Port)
 	if err := Rds.Dial(redisHost); err != nil {
-		logs.Assert(err, "Redis init failed")
+		log.Panicf("Init redis failed %s", err)
 	}
 
-	if Docker, err = defines.NewDocker(
-		Config.Docker.Endpoint,
-		Config.Docker.Cert,
-		Config.Docker.Key,
-		Config.Docker.Ca,
-	); err != nil {
-		logs.Assert(err, "Docker")
+	if Docker, err = defines.NewDocker(Config.Docker.Endpoint); err != nil {
+		log.Panicf("Init docker cli failed %s", err)
 	}
-	logs.Info("Global connections initiated")
+
+	log.Info("Global connections initiated")
+	ErrChan = make(chan error)
 }
 
 func CloseConn() {
 	Rds.Close()
-	logs.Info("Global connections closed")
+	log.Info("Global connections closed")
 }
 
 func GetRedisConn() *gore.Conn {
 	conn, err := Rds.Acquire()
 	if err != nil || conn == nil {
-		logs.Assert(err, "Get redis conn")
+		log.Panicf("Get redis connection failed %s", err)
 	}
 	return conn
 }

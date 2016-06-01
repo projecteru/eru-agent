@@ -7,8 +7,9 @@ import (
 
 	"github.com/projecteru/eru-agent/common"
 	"github.com/projecteru/eru-agent/defines"
-	"github.com/projecteru/eru-agent/logs"
 	"gopkg.in/yaml.v2"
+
+	log "github.com/Sirupsen/logrus"
 )
 
 var Config = defines.AgentConfig{}
@@ -16,12 +17,16 @@ var Config = defines.AgentConfig{}
 func LoadConfig() {
 	var configPath string
 	var version bool
-	flag.BoolVar(&logs.Mode, "DEBUG", false, "enable debug")
+	var debug bool
+	flag.BoolVar(&debug, "DEBUG", false, "enable debug")
 	flag.StringVar(&configPath, "c", "agent.yaml", "config file")
 	flag.BoolVar(&version, "v", false, "show version")
 	flag.Parse()
+	if debug {
+		log.SetLevel(log.DebugLevel)
+	}
 	if version {
-		logs.Info("Version", common.VERSION)
+		log.Infof("Version %s", common.VERSION)
 		os.Exit(0)
 	}
 	load(configPath)
@@ -29,20 +34,20 @@ func LoadConfig() {
 
 func load(configPath string) {
 	if _, err := os.Stat(configPath); err != nil {
-		logs.Assert(err, "config file invaild")
+		log.Panicf("Config file invaild %s", err)
 	}
 
 	b, err := ioutil.ReadFile(configPath)
 	if err != nil {
-		logs.Assert(err, "Read config file failed")
+		log.Panicf("Read config file failed %s", err)
 	}
 
 	if err := yaml.Unmarshal(b, &Config); err != nil {
-		logs.Assert(err, "Load config file failed")
+		log.Panicf("Load config file failed %s", err)
 	}
 
 	if Config.HostName, err = os.Hostname(); err != nil {
-		logs.Assert(err, "Load hostname failed")
+		log.Panicf("Load hostname failed %s", err)
 	}
-	logs.Debug("Configure:", Config)
+	log.Debugf("Configure: %s", Config)
 }

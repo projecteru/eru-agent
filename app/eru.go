@@ -6,27 +6,29 @@ import (
 	"sync"
 	"time"
 
-	"github.com/fsouza/go-dockerclient"
 	"github.com/projecteru/eru-agent/defines"
 	"github.com/projecteru/eru-agent/g"
-	"github.com/projecteru/eru-agent/logs"
 	"github.com/projecteru/eru-agent/utils"
 	"github.com/projecteru/eru-metric/metric"
 	"github.com/projecteru/eru-metric/statsd"
+
+	log "github.com/Sirupsen/logrus"
+	"github.com/docker/engine-api/types"
 )
 
 type EruApp struct {
 	defines.Meta
 	metric.Metric
+	sync.Mutex
 }
 
-func NewEruApp(container *docker.Container, extend map[string]interface{}) *EruApp {
+func NewEruApp(container types.ContainerJSON, extend map[string]interface{}) *EruApp {
 	name, entrypoint, ident := utils.GetAppInfo(container.Name)
 	if name == "" {
-		logs.Info("Container name invaild", container.Name)
+		log.Infof("Container name invaild %s", container.Name)
 		return nil
 	}
-	logs.Debug("Eru App", name, entrypoint, ident)
+	log.Debugf("Eru App %s %s %s", name, entrypoint, ident)
 
 	transfer := g.Transfers.Get(container.ID, 0)
 	client := statsd.CreateStatsDClient(transfer)
@@ -49,11 +51,11 @@ func NewEruApp(container *docker.Container, extend map[string]interface{}) *EruA
 
 	meta := defines.Meta{container.ID, container.State.Pid, name, entrypoint, ident, extend}
 	metric := metric.CreateMetric(step, client, tagString, endpoint)
-	eruApp := &EruApp{meta, metric}
+	eruApp := &EruApp{meta, metric, sync.Mutex{}}
 	return eruApp
 }
 
-var lock sync.RWMutex
+var lock sync.RWMutex = sync.RWMutex{}
 var Apps map[string]*EruApp = map[string]*EruApp{}
 
 func Add(app *EruApp) {
@@ -64,7 +66,7 @@ func Add(app *EruApp) {
 		return
 	}
 	if err := app.InitMetric(app.ID, app.Pid); err != nil {
-		logs.Info("Init app metric failed", err)
+		log.Errorf("Init app metric failed %s", err)
 		return
 	}
 	go app.Report()
@@ -77,7 +79,10 @@ func Remove(ID string) {
 	if _, ok := Apps[ID]; !ok {
 		return
 	}
-	Apps[ID].Exit()
+	app := Apps[ID]
+	app.Lock()
+	defer app.Unlock()
+	app.Exit()
 	delete(Apps, ID)
 }
 

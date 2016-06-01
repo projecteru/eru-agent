@@ -4,8 +4,10 @@ import (
 	"net"
 	"runtime"
 
+	"golang.org/x/net/context"
+
+	log "github.com/Sirupsen/logrus"
 	"github.com/projecteru/eru-agent/g"
-	"github.com/projecteru/eru-agent/logs"
 	"github.com/vishvananda/netlink"
 	"github.com/vishvananda/netns"
 )
@@ -40,14 +42,14 @@ func setDefaultRoute(cid, gateway string, pid int) bool {
 
 	origins, err := netns.Get()
 	if err != nil {
-		logs.Info("Get orignal namespace failed", err)
+		log.Errorf("Get orignal namespace failed %s", err)
 		return false
 	}
 	defer origins.Close()
 
 	ns, err := netns.GetFromPid(pid)
 	if err != nil {
-		logs.Info("Get container namespace failed", err)
+		log.Errorf("Get container namespace failed %s", err)
 		return false
 	}
 
@@ -56,16 +58,16 @@ func setDefaultRoute(cid, gateway string, pid int) bool {
 	defer netns.Set(origins)
 
 	if err := delDefaultRoute(); err != nil {
-		logs.Info("Delete default routing table failed", err)
+		log.Errorf("Delete default routing table failed %s", err)
 		return false
 	}
 
 	if err := addDefaultRoute(gateway); err != nil {
-		logs.Info("Add default route failed", err)
+		log.Errorf("Add default route failed %s", err)
 		return false
 	}
 
-	logs.Info("Set default route success", cid[:12], gateway)
+	log.Infof("Set default route success %s %s", cid[:12], gateway)
 	return true
 }
 
@@ -88,14 +90,14 @@ func addRoute(cid, CIDR, ifc string, pid int) bool {
 
 	origins, err := netns.Get()
 	if err != nil {
-		logs.Info("Get orignal namespace failed", err)
+		log.Errorf("Get orignal namespace failed %s", err)
 		return false
 	}
 	defer origins.Close()
 
 	ns, err := netns.GetFromPid(pid)
 	if err != nil {
-		logs.Info("Get container namespace failed", err)
+		log.Errorf("Get container namespace failed %s", err)
 		return false
 	}
 
@@ -104,11 +106,11 @@ func addRoute(cid, CIDR, ifc string, pid int) bool {
 	defer netns.Set(origins)
 
 	if err := addRouteByLink(CIDR, ifc); err != nil {
-		logs.Info("Add route failed", err)
+		log.Errorf("Add route failed %s", err)
 		return false
 	}
 
-	logs.Info("Add route success", cid[:12], CIDR, ifc)
+	log.Infof("Add route success %s %s %s", cid[:12], CIDR, ifc)
 	return true
 }
 
@@ -116,11 +118,12 @@ func AddRoute(cid, CIDR, ifc string) bool {
 	lock.Lock()
 	defer lock.Unlock()
 
-	logs.Info("Add", cid[:12], "route", CIDR, ifc)
+	log.Infof("Add %s route %s %s", cid[:12], CIDR, ifc)
 
-	container, err := g.Docker.InspectContainer(cid)
+	ctx := context.Background()
+	container, err := g.Docker.ContainerInspect(ctx, cid)
 	if err != nil {
-		logs.Info("RouteSetter inspect docker failed", err)
+		log.Errorf("RouteSetter inspect docker failed %s", err)
 		return false
 	}
 
@@ -133,15 +136,15 @@ func SetDefaultRoute(cid, gateway string) bool {
 	lock.Lock()
 	defer lock.Unlock()
 
-	logs.Info("Set", cid[:12], "default route", gateway)
+	log.Infof("Set %s default route %s", cid[:12], gateway)
 
-	container, err := g.Docker.InspectContainer(cid)
+	ctx := context.Background()
+	container, err := g.Docker.ContainerInspect(ctx, cid)
 	if err != nil {
-		logs.Info("RouteSetter inspect docker failed", err)
+		log.Errorf("RouteSetter inspect docker failed %s", err)
 		return false
 	}
 
 	pid := container.State.Pid
-
 	return setDefaultRoute(cid, gateway, pid)
 }

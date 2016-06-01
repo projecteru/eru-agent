@@ -1,18 +1,20 @@
 package network
 
 import (
+	log "github.com/Sirupsen/logrus"
 	"github.com/projecteru/eru-agent/g"
-	"github.com/projecteru/eru-agent/logs"
 	"github.com/vishvananda/netlink"
+	"golang.org/x/net/context"
 )
 
 func AddVlan(vethName, ips, cid string) bool {
-	_, err := g.Docker.InspectContainer(cid)
+	ctx := context.Background()
+	_, err := g.Docker.ContainerInspect(ctx, cid)
 	if err != nil {
-		logs.Info("VLanSetter inspect docker failed", err)
+		log.Errorf("VLanSetter inspect docker failed %s", err)
 		return false
 	}
-	logs.Info("Add VLAN device success", cid, vethName)
+	log.Infof("Add VLAN device success %s %s", cid, vethName)
 	return true
 }
 

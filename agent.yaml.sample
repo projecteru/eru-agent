@@ -8,10 +8,6 @@ limit:
 
 docker:
   endpoint: tcp://192.168.59.103:2376
-  cert: cert.pem
-  key: key.pem
-  ca: ca.pem
-  health: 30
 
 lenz:
   forwards:

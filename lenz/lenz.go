@@ -6,7 +6,8 @@ import (
 	"github.com/projecteru/eru-agent/common"
 	"github.com/projecteru/eru-agent/defines"
 	"github.com/projecteru/eru-agent/g"
-	"github.com/projecteru/eru-agent/logs"
+
+	log "github.com/Sirupsen/logrus"
 )
 
 var Attacher *AttachManager
@@ -18,29 +19,29 @@ func InitLenz() {
 	Router = NewRouteManager(Attacher)
 	Routefs = RouteFileStore(g.Config.Lenz.Routes)
 	if len(g.Config.Lenz.Forwards) > 0 {
-		logs.Debug("Lenz Routing all to", g.Config.Lenz.Forwards)
+		log.Debugf("Lenz Routing all to %s", g.Config.Lenz.Forwards)
 		target := defines.Target{Addrs: g.Config.Lenz.Forwards}
 		route := defines.Route{ID: common.LENZ_DEFAULT, Target: &target}
 		route.LoadBackends()
 		Router.Add(&route)
 	}
 	if _, err := os.Stat(g.Config.Lenz.Routes); err == nil {
-		logs.Debug("Loading and persisting routes in", g.Config.Lenz.Routes)
-		logs.Assert(Router.Load(Routefs), "persistor")
+		log.Debugf("Loading and persisting routes in %s", g.Config.Lenz.Routes)
+		log.Panicf("Persistor load error %s", Router.Load(Routefs))
 	}
-	logs.Info("Lenz initiated")
+	log.Info("Lenz initiated")
 }
 
 func CloseLenz() {
-	logs.Info("Close all lenz streamer")
+	log.Info("Close all lenz streamer")
 	routes, err := Router.GetAll()
 	if err != nil {
-		logs.Info("Get all lenz route failed", err)
+		log.Errorf("Get all lenz route failed %s", err)
 		return
 	}
 	for _, route := range routes {
 		if !Router.Remove(route.ID) {
-			logs.Info("Close lenz route failed", route.ID)
+			log.Infof("Close lenz route failed %s", route.ID)
 		}
 	}
 }

@@ -3,10 +3,12 @@ package app
 import (
 	"fmt"
 
+	"golang.org/x/net/context"
+
+	log "github.com/Sirupsen/logrus"
+	"github.com/keimoon/gore"
 	"github.com/projecteru/eru-agent/common"
 	"github.com/projecteru/eru-agent/g"
-	"github.com/projecteru/eru-agent/logs"
-	"github.com/keimoon/gore"
 )
 
 type SoftLimit struct {
@@ -20,7 +22,7 @@ var isLimit bool = false
 
 func Limit() {
 	if g.Config.Limit.Memory != 0 {
-		logs.Info("App memory soft limit start")
+		log.Info("App memory soft limit start")
 		isLimit = true
 		go calcMemoryUsage()
 	}
@@ -63,7 +65,7 @@ func judgeMemoryUsage() {
 			rate[cid] = float64(usage) / define
 		}
 	}
-	logs.Debug("Current memory usage", totalUsage, "max", g.Config.Limit.Memory)
+	log.Debugf("Current memory usage %d max %d", totalUsage, g.Config.Limit.Memory)
 	for {
 		if totalUsage < g.Config.Limit.Memory {
 			return
@@ -78,7 +80,7 @@ func judgeMemoryUsage() {
 			cid = k
 		}
 		if cid == "" {
-			logs.Info("MemLimit can not stop containers")
+			log.Info("MemLimit can not stop containers")
 			break
 		}
 		softOOMKill(cid, exceedRate)
@@ -91,17 +93,18 @@ func judgeMemoryUsage() {
 }
 
 func softOOMKill(cid string, rate float64) {
-	logs.Debug("OOM killed", cid[:12])
+	log.Debugf("OOM killed %s", cid[:12])
 	conn := g.GetRedisConn()
 	defer g.ReleaseRedisConn(conn)
 
 	key := fmt.Sprintf("eru:agent:%s:container:reason", cid)
 	if _, err := gore.NewCommand("SET", key, common.OOM_KILLED).Run(conn); err != nil {
-		logs.Info("OOM killed set flag", err)
+		log.Errorf("OOM killed set flag %s", err)
 	}
-	if err := g.Docker.StopContainer(cid, 10); err != nil {
-		logs.Info("OOM killed failed", cid[:12])
+	ctx := context.Background()
+	if err := g.Docker.ContainerStop(ctx, cid, 10); err != nil {
+		log.Infof("OOM killed failed %s", cid[:12])
 		return
 	}
-	logs.Info("OOM killed success", cid[:12])
+	log.Infof("OOM killed success %s", cid[:12])
 }

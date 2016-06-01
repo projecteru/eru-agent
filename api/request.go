@@ -3,7 +3,7 @@ package api
 import (
 	"net/http"
 
-	"github.com/projecteru/eru-agent/logs"
+	log "github.com/Sirupsen/logrus"
 )
 
 type Request struct {
@@ -20,6 +20,6 @@ func (r *Request) Init() {
 func NewRequest(r *http.Request) *Request {
 	req := &Request{*r, 0, 20}
 	req.Init()
-	logs.Debug("HTTP request", req.Method, req.URL.Path)
+	log.Debugf("HTTP request %s %s", req.Method, req.URL.Path)
 	return req
 }
